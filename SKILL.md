@@ -103,7 +103,7 @@ skip this.
 
 ## 5. Stills → draft → final
 ```bash
-python3 -I "$P/slides.py" render "$DIR" --still <frame>      # → out/stills/fNNNNN.png (half size)
+python3 -I "$P/slides.py" render "$DIR" --still <frame>      # → _assets/stills/fNNNNN.png (half size)
 python3 -I "$P/slides.py" render "$DIR" --draft              # → out/draft.mp4, 960×540
 ```
 The video is animated with Remotion: each slide arrives with a short settle-and-blur, the
@@ -124,5 +124,6 @@ along the top, and captions show the beat being spoken. A soft subtitle track is
 python3 -I "$P/slides.py" render "$DIR" --out "<dest>/<deck-name>-voice.mp4"
 ```
 `render` prints the duration next to the voice's `totalSec`; they must match (`OFF BY`
-otherwise). Copy `voice/transcript.md` next to the video as `<deck-name>-transcript.md`, then
-give the user the path, length, voice and device.
+otherwise). The destination folder ends up with just the mp4 — scratch files (props, stills)
+live under `$DIR/_assets/` and the transcript stays in `$DIR/voice/transcript.md`. Then give the
+user the path, length, voice and device.

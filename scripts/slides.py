@@ -396,7 +396,7 @@ def render_remotion(a, proj, sm, vm, script, out):
     r = Path(a.renderer).expanduser()
     if not (r / 'node_modules').exists():
         die(f'No renderer at {r}. Run: bash {SKILL}/scripts/setup-renderer.sh {SKILL} {r}')
-    pj = proj / 'out' / 'props.json'
+    pj = proj / '_assets' / 'props.json'
     pj.parent.mkdir(parents=True, exist_ok=True)
     pj.write_text(json.dumps(props(proj, sm, vm, script, a.captions == 'on', a.progress == 'on'), ensure_ascii=False))
     base = ['npx', 'remotion']
@@ -438,7 +438,7 @@ def render(a):
     stale = [sc['id'] for sc, t in zip(script['scenes'], vm['scenes']) if spoken_hash(sc, script, vm['speed']) != t['textHash']]
     if stale or len(script['scenes']) != len(vm['scenes']):
         die(f'Spoken text changed for {", ".join(stale)} since the last generate. Run: voice.py generate --only {",".join(stale)}', 2)
-    default = f'stills/f{a.still:05d}.png' if a.still is not None else ('draft.mp4' if a.draft else 'final.mp4')
+    default = f'_assets/stills/f{a.still:05d}.png' if a.still is not None else ('draft.mp4' if a.draft else 'final.mp4')
     out = Path(a.out).resolve() if a.out else proj / 'out' / default
     out.parent.mkdir(parents=True, exist_ok=True)
     if a.engine == 'remotion':
