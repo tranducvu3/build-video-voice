@@ -46,6 +46,7 @@ DEFAULT_TAIL = 0.55
 DEFAULT_GAP = 0.25
 DEFAULT_SPEED = 1.08
 DEFAULT_TEMPERATURE = 0.9
+DEFAULT_VOICE = 'Hải Đăng'
 SILENCE = 0.01  # amplitude below which the model's own edge silence is trimmed
 SHORT_SCENE_SEC = 2.0
 CUE = re.compile(r'\s*\[[^\]]+\]\s*')
@@ -84,7 +85,7 @@ def draft(d, force):
                'beats': [{'text': (s.get('notes') or s.get('text') or '').replace('\n', ' ').strip(), 'focus': None}]}
               for s in slides]
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({'slidesHash': sha(sf), 'lang': 'vie', 'voice': None, 'speed': DEFAULT_SPEED,
+    out.write_text(json.dumps({'slidesHash': sha(sf), 'lang': 'vie', 'voice': DEFAULT_VOICE, 'speed': DEFAULT_SPEED,
                                'temperature': DEFAULT_TEMPERATURE, 'lexicon': {}, 'scenes': scenes},
                               ensure_ascii=False, indent=2) + '\n')
     print(out)
@@ -219,7 +220,7 @@ def generate(d, a):
         old, old_voice = {s['id']: s for s in prev['scenes']}, prev.get('voice')
 
     # A partial re-speak keeps the earlier speaker, pace and timing so the clips still match.
-    voice = a.voice or script.get('voice') or old_voice
+    voice = a.voice or script.get('voice') or old_voice or DEFAULT_VOICE
     speed = a.speed or (prev.get('speed') if only else None) or script.get('speed') or DEFAULT_SPEED
     temperature = a.temperature or script.get('temperature') or DEFAULT_TEMPERATURE
     lead, tail, gap = ((prev.get('leadSec', a.lead), prev.get('tailSec', a.tail), prev.get('gapSec', a.gap)) if only
@@ -297,7 +298,7 @@ def main():
     pg = sub.add_parser('generate')
     pg.add_argument('dir')
     pg.add_argument('--device', choices=['auto', 'cpu', 'gpu'], default='auto')
-    pg.add_argument('--voice')
+    pg.add_argument('--voice', help=f'speaker name (default: {DEFAULT_VOICE})')
     pg.add_argument('--only')
     pg.add_argument('--speed', type=float)
     pg.add_argument('--temperature', type=float)

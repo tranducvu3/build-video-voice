@@ -1,14 +1,16 @@
 ---
 name: build-video-voice
-description: Turn an existing slide deck (PDF, PowerPoint/Keynote/ODP, an HTML deck such as a feature-guide keynote, or a folder of slide images) into an animated MP4 with a lively spoken voice-over that explains each slide, generated locally by VieNeu-TTS. The camera zooms to whatever is being explained, with highlight rings, callout chips, chapter cards, a chapter bar and captions (Remotion), every slide timed to its voice. Picks the GPU when there is an NVIDIA card or an Apple Silicon Mac, otherwise the CPU. Use when the user asks to "make a video from these slides", "add voice / narration / voice-over to a deck", "tạo video từ slide", "thuyết minh / lồng tiếng cho slide".
+description: Turn an existing slide deck (PDF, PowerPoint/Keynote/ODP, an HTML deck such as a feature-guide keynote, or a folder of slide images) into an animated MP4 with a lively spoken voice-over that explains each slide, generated locally by VieNeu-TTS. The camera zooms to whatever is being explained, with highlight rings, callout chips, chapter cards, a chapter bar and captions (Remotion), every slide timed to its voice. Picks the GPU when there is an NVIDIA card or an Apple Silicon Mac, otherwise the CPU. Use when the user asks to "make a video from these slides", "add voice / narration / voice-over to a deck", "tạo video từ slide", "thuyết minh / lồng tiếng cho slide", or invokes /build-video-voice.
 argument-hint: "<deck-path> [--out DIR] [--device auto|cpu|gpu] [--voice NAME]"
+user_invocable: true
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
 ---
 
 # Slide deck → narrated video
 
 ```bash
-P="${CLAUDE_SKILL_DIR}/scripts"; VD="${XDG_DATA_HOME:-$HOME/.local/share}/build-video-voice/voice"; PY="$VD/.venv/bin/python"
+SKILL_DIR="${CLAUDE_SKILL_DIR:-$HOME/.gemini/config/skills/build-video-voice}"
+P="$SKILL_DIR/scripts"; VD="${XDG_DATA_HOME:-$HOME/.local/share}/build-video-voice/voice"; PY="$VD/.venv/bin/python"
 ```
 The deck is the first argument. If there is none, ask for the path. Pass any `--device` /
 `--voice` arguments on to `generate` in step 4, and `--out` to `ingest` in step 2.
@@ -24,7 +26,7 @@ spoken by a Vietnamese voice, and let them decide whether to go on.
 ## 1. Voice engine and renderer (install once)
 ```bash
 bash "$P/setup-voice.sh" "$VD"
-bash "$P/setup-renderer.sh" "${CLAUDE_SKILL_DIR}" "$R"
+bash "$P/setup-renderer.sh" "$SKILL_DIR" "$R"
 ```
 with `R="${XDG_DATA_HOME:-$HOME/.local/share}/build-video-voice/renderer"`.
 - Voice needs `uv`. If `nvidia-smi` sees a GPU it installs the CUDA build (PyTorch, ~7 GB); on
@@ -79,10 +81,10 @@ python3 -I "$P/slides.py" regions "$DIR"
 - **`lexicon`**: written form → spoken form for acronyms, units, dates, URLs and numbers
   (`"km": "ki lô mét"`, `"IT": "ai ti"`, `"sports.techcoop.vn": "sports chấm techcoop chấm vi en"`).
   Captions show the written `text`.
-- **Voice.** Prefer a natural-style voice (*Trúc Ly*, *Ngọc Huyền*, *Đoan Trang*, female;
-  *Hải Đăng*, *Quốc Tuấn*, male). The news-style ones (*Mai Anh*, *Thùy Dung*, *Minh Đức*) sound
-  flat on explainer videos. `speed` (default 1.08) and `temperature` (default 0.9) live in the
-  script too.
+- **Voice.** Default is **Hải Đăng** (natural male voice). Other natural-style options:
+  *Quốc Tuấn* (male); *Trúc Ly*, *Ngọc Huyền*, *Đoan Trang* (female). The news-style ones
+  (*Mai Anh*, *Thùy Dung*, *Minh Đức*) sound flat on explainer videos. `speed` (default 1.08)
+  and `temperature` (default 0.9) live in the script too.
 - Optional `theme`: `{primary, deep, accent, light, highlight, ground}` colours; default teal/amber.
 
 Show the user the whole script (per slide: number, beats with their focus/callout) and the
@@ -91,7 +93,7 @@ skip this.
 
 ## 4. Generate the voice
 ```bash
-"$PY" "$P/voice.py" generate "$DIR" [--device auto|cpu|gpu] [--voice "Trúc Ly"] [--speed 1.1]
+"$PY" "$P/voice.py" generate "$DIR" [--device auto|cpu|gpu] [--voice "Hải Đăng"] [--speed 1.1]
 ```
 - Every beat is spoken separately (the GPU batches them all), stretched to `speed` without a
   pitch change, then each slide's beats are joined with `--gap` (0.25 s) between them and
