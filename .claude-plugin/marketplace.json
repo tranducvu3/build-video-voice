@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "slide-video-voice",
+  "description": "Narrated videos from existing slide decks for Claude Code",
+  "owner": {
+    "name": "Vu Tran",
+    "url": "https://github.com/tranducvu3"
+  },
+  "plugins": [
+    {
+      "name": "slide-video-voice",
+      "description": "Slide deck → MP4 with a spoken explanation per slide (VieNeu-TTS, local, GPU or CPU), soft subtitles and a transcript. Command: /slide-video-voice:build-video-voice <deck>.",
+      "category": "productivity",
+      "source": "./plugins/slide-video-voice",
+      "homepage": "https://github.com/tranducvu3/slide-video-voice"
+    }
+  ]
+}

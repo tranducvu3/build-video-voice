@@ -1,0 +1,11 @@
+{
+  "name": "slide-video-voice",
+  "version": "0.1.0",
+  "description": "Turn an existing slide deck (PDF, PPTX/ODP/Keynote, HTML deck or slide images) into an MP4 video with a local VieNeu-TTS voice-over that explains each slide",
+  "author": {
+    "name": "Vu Tran"
+  },
+  "homepage": "https://github.com/tranducvu3/slide-video-voice",
+  "repository": "https://github.com/tranducvu3/slide-video-voice",
+  "skills": "./skills/"
+}
