@@ -1,6 +1,6 @@
-# slide-video-voice
+# build-video-voice
 
-A Claude Code plugin that turns a slide deck you already have into a video with a voice-over
+A Claude Code skill (`/build-video-voice`) that turns a slide deck you already have into a video with a voice-over
 that explains each slide.
 
 It is a customised version of `feature-guide:build-video-voice` from
@@ -24,13 +24,17 @@ a feature-guide storyboard, and the video is assembled with ffmpeg instead of Re
 
 ## Install
 
-```
-/plugin marketplace add tranducvu3/slide-video-voice
-/plugin install slide-video-voice@slide-video-voice
-/reload-plugins
+Clone it as a personal skill, so it is available as `/build-video-voice` in every project:
+
+```bash
+git clone git@github.com:tranducvu3/slide-video-voice.git ~/.claude/skills/build-video-voice
 ```
 
-Then: `/slide-video-voice:build-video-voice path/to/deck.pdf`
+Update with `git -C ~/.claude/skills/build-video-voice pull`. Then:
+`/build-video-voice path/to/deck.pdf`
+
+The voice engine installs once into `~/.local/share/build-video-voice/voice` (outside the
+skill folder, so updates keep it).
 
 ## Requirements
 
@@ -43,6 +47,7 @@ Then: `/slide-video-voice:build-video-voice path/to/deck.pdf`
 
 ## Scripts
 
+- `SKILL.md` — the workflow Claude follows
 - `scripts/slides.py ingest <deck>` — export slides → `<deck>-video/slides/`, `slides.json`
 - `scripts/voice.py draft|generate <project>` — narration script and voice clips
 - `scripts/slides.py render <project> [--draft] [--motion zoom] [--fade 0.3] [--subs none]`

@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, Write, Edit, SendUserFile, AskUserQuestion
 # Slide deck → narrated video
 
 ```bash
-P="${CLAUDE_PLUGIN_ROOT}/scripts"; VD="${CLAUDE_PLUGIN_DATA}/voice"; PY="$VD/.venv/bin/python"
+P="${CLAUDE_SKILL_DIR}/scripts"; VD="${XDG_DATA_HOME:-$HOME/.local/share}/build-video-voice/voice"; PY="$VD/.venv/bin/python"
 ```
 The deck is the first argument. If there is none, ask for the path. Pass any `--device` /
 `--voice` arguments on to `generate` in step 4, and `--out` to `ingest` in step 2.

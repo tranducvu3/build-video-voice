@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install (once) the VieNeu-TTS voice environment used by build-video-voice.
 #   setup-voice.sh <voice-dir>
-# <voice-dir> should be ${CLAUDE_PLUGIN_DATA}/voice so it survives plugin updates.
+# <voice-dir> lives outside the skill folder (e.g. ~/.local/share/build-video-voice/voice) so it survives skill updates.
 # Picks the device: an NVIDIA GPU (nvidia-smi answers) or an Apple Silicon Mac (its GPU via
 # MPS) installs vieneu[cuda] (PyTorch; on macOS the extra just pulls the MPS-capable torch),
 # anything else installs the torch-free CPU build (ONNX Runtime). SVV_VOICE_DEVICE=cpu|gpu
@@ -31,7 +31,7 @@ if [ -f "$dest/.stamp" ] && [ "$(cat "$dest/.stamp")" = "$stamp" ] && [ -x "$des
   echo "voice ready: $dest ($device)"; exit 0
 fi
 
-for other in "$(dirname "$(dirname "$dest")")"/feature-guide-*/voice; do
+for other in "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/data/feature-guide-*/voice; do
   if [ -f "$other/.stamp" ] && [ "$(cat "$other/.stamp")" = "$stamp" ] && [ -x "$other/.venv/bin/python" ]; then
     other=$(cd "$other" && pwd -P)
     mkdir -p "$(dirname "$dest")"
