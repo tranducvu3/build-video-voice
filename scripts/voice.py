@@ -2,16 +2,24 @@
 """Voice-over for a slide video with VieNeu-TTS (github.com/pnnbao97/VieNeu-TTS).
 
   voice.py draft    <project-dir> [--force]
-      Write voice/script.json from slides.json: one scene per slide, seeded with the slide's
-      speaker notes, else its on-screen text. Rewrite each scene as a spoken explanation of
-      that slide, fill the `lexicon` (written form → spoken form, e.g. "CSV": "xê ét vê"), then
-      generate. Refuses to overwrite unless --force.
+      Write voice/script.json from slides.json: one scene per slide with one beat, seeded with
+      the slide's speaker notes, else its on-screen text. Rewrite each scene as 1–4 beats
+      (a beat = one or two spoken sentences + the region of the slide the camera shows while
+      it is spoken), fill the `lexicon` (written form → spoken form), then generate.
+      Refuses to overwrite unless --force.
   voice.py generate <project-dir> [--device auto|cpu|gpu] [--voice NAME] [--only p01,p03]
-                                  [--lead SEC] [--tail SEC] [--fps N]
-      Speak every scene into voice/NN-<id>.wav, padded with --lead/--tail silence and rounded
-      up to whole video frames, concatenate them into voice/narration.wav, and write
-      voice/transcript.md and voice/voice.json (per-slide durations that slides.py render uses).
-      --only re-speaks the named slides and keeps the rest.
+                                  [--speed X] [--temperature T] [--lead SEC] [--tail SEC]
+                                  [--gap SEC] [--fps N]
+      Speak every beat, join each slide's beats (with --gap silence between them, --lead /
+      --tail around the slide) into voice/NN-<id>.wav rounded up to whole frames, concatenate
+      them into voice/narration.wav, and write voice/transcript.md and voice/voice.json
+      (per-slide and per-beat frames used by slides.py render). --only re-speaks the named
+      slides and keeps the rest.
+
+Liveliness: pick a natural-style voice (not a news one), keep sentences short, and use the
+model's inline cues sparingly: [cười] (a light laugh), [thở dài], [hắng giọng]. --speed (default
+from the script, else 1.08) time-stretches the speech without changing pitch; --temperature
+(default from the script, else 0.9) gives more varied intonation.
 
 Device: --device auto uses the GPU (PyTorch) when one is available, otherwise the CPU
 (ONNX Runtime). The GPU is an NVIDIA card (CUDA) or, on Apple Silicon, the Mac's own GPU (MPS).
@@ -25,16 +33,22 @@ import hashlib
 import json
 import math
 import os
+import re
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 VOICE_DIR = 'voice'
 DEFAULT_FPS = 30
-DEFAULT_LEAD = 0.4
-DEFAULT_TAIL = 0.8  # a slide change needs a beat more air than a UI step
+DEFAULT_LEAD = 0.35
+DEFAULT_TAIL = 0.55
+DEFAULT_GAP = 0.25
+DEFAULT_SPEED = 1.08
+DEFAULT_TEMPERATURE = 0.9
 SILENCE = 0.01  # amplitude below which the model's own edge silence is trimmed
-SHORT_SCENE_SEC = 2.5
+SHORT_SCENE_SEC = 2.0
+CUE = re.compile(r'\s*\[[^\]]+\]\s*')
 
 
 def die(msg, code=1):
@@ -44,6 +58,15 @@ def die(msg, code=1):
 
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def plain(text):
+    """Text as shown in captions: emotion cues removed."""
+    return CUE.sub(' ', text).strip()
+
+
+def beats_of(scene):
+    return scene.get('beats') or [{'text': scene.get('text', '')}]
 
 
 def slides_file(d):
@@ -57,10 +80,12 @@ def draft(d, force):
         die(f'{out} exists. Edit it, or pass --force to start over.')
     sf = slides_file(d)
     slides = json.loads(sf.read_text())['slides']
-    scenes = [{'id': s['id'], 'slide': s['image'], 'text': (s.get('notes') or s.get('text') or '').replace('\n', ' ').strip()}
+    scenes = [{'id': s['id'], 'kind': 'slide',
+               'beats': [{'text': (s.get('notes') or s.get('text') or '').replace('\n', ' ').strip(), 'focus': None}]}
               for s in slides]
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({'slidesHash': sha(sf), 'lang': 'vie', 'voice': None, 'lexicon': {}, 'scenes': scenes},
+    out.write_text(json.dumps({'slidesHash': sha(sf), 'lang': 'vie', 'voice': None, 'speed': DEFAULT_SPEED,
+                               'temperature': DEFAULT_TEMPERATURE, 'lexicon': {}, 'scenes': scenes},
                               ensure_ascii=False, indent=2) + '\n')
     print(out)
 
@@ -106,7 +131,7 @@ def load_tts(device):
 def speak(device, texts, kw):
     tts, used = load_tts(device)
     try:
-        # GPU batches every scene into shared forward passes; on CPU infer_batch runs sequentially anyway.
+        # GPU batches every beat into shared forward passes; on CPU infer_batch runs sequentially anyway.
         wavs = tts.infer_batch(texts, **kw) if used != 'cpu' else [tts.infer(t, **kw) for t in texts]
     except Exception as e:
         if device != 'auto' or used == 'cpu':
@@ -126,13 +151,36 @@ def trim(wav, sr):
     return wav[max(0, loud[0] - margin):loud[-1] + margin]
 
 
-def fit(wav, sr, fps, lead, tail):
-    """Pad a spoken clip with silence and round it up to whole frames; return (clip, frames)."""
+def tempo(wav, sr, speed):
+    """Time-stretch without changing pitch (ffmpeg atempo)."""
     import numpy as np
-    body = np.concatenate([np.zeros(int(lead * sr), np.float32), wav.astype(np.float32), np.zeros(int(tail * sr), np.float32)])
+    if abs(speed - 1) < 1e-3:
+        return wav
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-f', 'f32le', '-ar', str(sr), '-ac', '1', '-i', 'pipe:0',
+                        '-filter:a', f'atempo={speed}', '-f', 'f32le', 'pipe:1'],
+                       input=wav.astype(np.float32).tobytes(), capture_output=True)
+    if r.returncode:
+        die(f'ffmpeg atempo failed: {r.stderr.decode()[-500:]}')
+    return np.frombuffer(r.stdout, np.float32).copy()
+
+
+def assemble(beats, sr, fps, lead, tail, gap):
+    """Join a slide's beats with silence; return (clip, frames, [(startFrame, frames)] per beat)."""
+    import numpy as np
+    z = lambda sec: np.zeros(int(round(sec * sr)), np.float32)
+    parts, marks, t = [z(lead)], [], lead
+    for i, b in enumerate(beats):
+        if i:
+            parts.append(z(gap))
+            t += gap
+        marks.append((t, len(b) / sr))
+        parts.append(b.astype(np.float32))
+        t += len(b) / sr
+    parts.append(z(tail))
+    body = np.concatenate(parts)
     frames = max(1, math.ceil(len(body) * fps / sr))
-    total = round(frames * sr / fps)
-    return np.pad(body, (0, total - len(body))), frames
+    clip = np.pad(body, (0, round(frames * sr / fps) - len(body)))
+    return clip, frames, [(int(s * fps), max(1, round(d * fps))) for s, d in marks]
 
 
 def generate(d, a):
@@ -150,13 +198,14 @@ def generate(d, a):
     ids = [s['id'] for s in script['scenes']]
     if ids != expected:
         die(f'Script scenes {ids} do not match the slides {expected}. Keep one scene per slide, in order.', 2)
-    empty = [s['id'] for s in script['scenes'] if not s.get('text', '').strip()]
+    empty = [s['id'] for s in script['scenes'] if not all(plain(b.get('text', '')) for b in beats_of(s))]
     if empty:
-        die(f'Slides with no narration: {", ".join(empty)}')
+        die(f'Slides with an empty beat: {", ".join(empty)}')
 
     old, old_voice, fps = {}, None, a.fps or script.get('fps') or DEFAULT_FPS
     mp = vd / 'voice.json'
     only = set(a.only.split(',')) if a.only else None
+    prev = {}
     if only:
         unknown = only - set(ids)
         if unknown:
@@ -169,40 +218,45 @@ def generate(d, a):
         fps = prev['fps']
         old, old_voice = {s['id']: s for s in prev['scenes']}, prev.get('voice')
 
-    # A partial re-speak keeps the earlier speaker so the clips still match.
+    # A partial re-speak keeps the earlier speaker, pace and timing so the clips still match.
     voice = a.voice or script.get('voice') or old_voice
+    speed = a.speed or (prev.get('speed') if only else None) or script.get('speed') or DEFAULT_SPEED
+    temperature = a.temperature or script.get('temperature') or DEFAULT_TEMPERATURE
+    lead, tail, gap = ((prev.get('leadSec', a.lead), prev.get('tailSec', a.tail), prev.get('gapSec', a.gap)) if only
+                       else (a.lead, a.tail, a.gap))
     lexicon = script.get('lexicon') or {}
-    text_hash = lambda s: hashlib.sha256(speakable(s['text'], lexicon).encode()).hexdigest()[:16]
+    text_hash = lambda s: hashlib.sha256(json.dumps([speakable(b['text'], lexicon) for b in beats_of(s)] + [speed],
+                                                    ensure_ascii=False).encode()).hexdigest()[:16]
     todo = [s for s in script['scenes'] if not only or s['id'] in only]
     if only:
         stale = [s['id'] for s in script['scenes'] if s['id'] not in only and old.get(s['id'], {}).get('textHash') != text_hash(s)]
         if stale:
-            die(f'No up-to-date clip for {", ".join(stale)} (its text or the lexicon changed). Add it to --only.')
+            die(f'No up-to-date clip for {", ".join(stale)} (its text, beats or the lexicon changed). Add it to --only.')
     t0 = time.time()
-    kw = {'voice': voice} if voice else {}
-    texts = [speakable(s['text'], lexicon) for s in todo]
-    sr, wavs, device = speak(a.device, texts, kw)
-    spoken = dict(zip((s['id'] for s in todo), wavs))
-    print(f'spoke {len(todo)} slide(s) on {device} in {time.time() - t0:.1f}s', file=sys.stderr)
+    kw = {'temperature': temperature, **({'voice': voice} if voice else {})}
+    flat = [(s['id'], speakable(b['text'], lexicon)) for s in todo for b in beats_of(s)]
+    sr, wavs, device = speak(a.device, [t for _, t in flat], kw)
+    spoken = {}
+    for (sid, _), w in zip(flat, wavs):
+        spoken.setdefault(sid, []).append(tempo(trim(np.asarray(w, np.float32), sr), sr, speed))
+    print(f'spoke {len(flat)} beat(s) of {len(todo)} slide(s) on {device} in {time.time() - t0:.1f}s', file=sys.stderr)
 
     scenes, clips, start = [], [], 0
     for n, s in enumerate(script['scenes'], 1):
         f = f'{VOICE_DIR}/{n:02d}-{s["id"]}.wav'
         if s['id'] in spoken:
-            speech = trim(np.asarray(spoken[s['id']], np.float32), sr)
-            clip, frames = fit(speech, sr, fps, a.lead, a.tail)
+            clip, frames, marks = assemble(spoken[s['id']], sr, fps, lead, tail, gap)
             sf.write(d / f, clip, sr)
-            speech_sec = len(speech) / sr
+            beats = [{'startFrame': st, 'frames': fr} for st, fr in marks]
         else:
-            prev = old[s['id']]
-            clip, file_sr = sf.read(d / prev['file'], dtype='float32')
+            p = old[s['id']]
+            clip, file_sr = sf.read(d / p['file'], dtype='float32')
             if file_sr != sr:
-                die(f'{prev["file"]} is {file_sr} Hz, expected {sr}. Regenerate without --only.')
-            frames, speech_sec, f = prev['frames'], prev['speechSec'], prev['file']
+                die(f'{p["file"]} is {file_sr} Hz, expected {sr}. Regenerate without --only.')
+            frames, beats, f = p['frames'], p['beats'], p['file']
         clips.append(clip)
-        scenes.append({'id': s['id'], 'file': f, 'speechSec': round(speech_sec, 3),
-                       'durationSec': frames / fps, 'frames': frames, 'startFrame': start,
-                       'textHash': text_hash(s)})
+        scenes.append({'id': s['id'], 'file': f, 'durationSec': frames / fps, 'frames': frames, 'startFrame': start,
+                       'beats': beats, 'textHash': text_hash(s)})
         start += frames
 
     track = np.concatenate(clips)
@@ -214,8 +268,9 @@ def generate(d, a):
     import vieneu
     manifest = {
         'engine': f'VieNeu-TTS v3 Turbo (vieneu {getattr(vieneu, "__version__", "?")})',
-        'device': device, 'voice': voice, 'lang': script.get('lang', 'vie'), 'sampleRate': sr, 'fps': fps,
-        'leadSec': a.lead if not only else prev.get('leadSec', a.lead),
+        'device': device, 'voice': voice, 'speed': speed, 'temperature': temperature,
+        'lang': script.get('lang', 'vie'), 'sampleRate': sr, 'fps': fps,
+        'leadSec': lead, 'tailSec': tail, 'gapSec': gap,
         'slidesHash': sha(slf), 'scriptHash': sha(sp),
         'audio': f'{VOICE_DIR}/narration.wav', 'totalFrames': start, 'totalSec': round(start / fps, 3),
         'scenes': scenes,
@@ -224,11 +279,11 @@ def generate(d, a):
     clock = lambda f: f'{int(f / fps // 60)}:{f / fps % 60:04.1f}'
     lines = [f'# {d.name} — transcript', '']
     for sc, s in zip(scenes, script['scenes']):
-        lines += [f'**{clock(sc["startFrame"])} · slide {sc["id"][1:]}**', '', s['text'], '']
+        lines += [f'**{clock(sc["startFrame"])} · slide {sc["id"][1:]}**', '', ' '.join(plain(b['text']) for b in beats_of(s)), '']
     (vd / 'transcript.md').write_text('\n'.join(lines))
     for s in scenes:
-        warn = '  (short: viewers need time to read the slide)' if s['durationSec'] < SHORT_SCENE_SEC else ''
-        print(f'{s["id"]:>6}  {s["durationSec"]:6.2f}s  frames {s["startFrame"]}+{s["frames"]}{warn}')
+        warn = '  (short)' if s['durationSec'] < SHORT_SCENE_SEC else ''
+        print(f'{s["id"]:>6}  {s["durationSec"]:6.2f}s  beats {len(s["beats"])}  frames {s["startFrame"]}+{s["frames"]}{warn}')
     print(f'total {manifest["totalSec"]}s → {mp}')
 
 
@@ -244,8 +299,11 @@ def main():
     pg.add_argument('--device', choices=['auto', 'cpu', 'gpu'], default='auto')
     pg.add_argument('--voice')
     pg.add_argument('--only')
+    pg.add_argument('--speed', type=float)
+    pg.add_argument('--temperature', type=float)
     pg.add_argument('--lead', type=float, default=DEFAULT_LEAD)
     pg.add_argument('--tail', type=float, default=DEFAULT_TAIL)
+    pg.add_argument('--gap', type=float, default=DEFAULT_GAP)
     pg.add_argument('--fps', type=int)
     a = p.parse_args()
     d = Path(a.dir).resolve()

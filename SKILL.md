@@ -1,8 +1,8 @@
 ---
 name: build-video-voice
-description: Turn an existing slide deck (PDF, PowerPoint/Keynote/ODP, an HTML deck such as a feature-guide keynote, or a folder of slide images) into an MP4 video with a spoken voice-over that explains each slide, generated locally by VieNeu-TTS. Each slide stays on screen exactly as long as its explanation; the clips form one narration track with soft subtitles. Picks the GPU when there is an NVIDIA card or an Apple Silicon Mac, otherwise the CPU. Use when the user asks to "make a video from these slides", "add voice / narration / voice-over to a deck", "tạo video từ slide", "thuyết minh / lồng tiếng cho slide".
+description: Turn an existing slide deck (PDF, PowerPoint/Keynote/ODP, an HTML deck such as a feature-guide keynote, or a folder of slide images) into an animated MP4 with a lively spoken voice-over that explains each slide, generated locally by VieNeu-TTS. The camera zooms to whatever is being explained, with highlight rings, callout chips, chapter cards, a chapter bar and captions (Remotion), every slide timed to its voice. Picks the GPU when there is an NVIDIA card or an Apple Silicon Mac, otherwise the CPU. Use when the user asks to "make a video from these slides", "add voice / narration / voice-over to a deck", "tạo video từ slide", "thuyết minh / lồng tiếng cho slide".
 argument-hint: "<deck-path> [--out DIR] [--device auto|cpu|gpu] [--voice NAME]"
-allowed-tools: Bash, Read, Write, Edit, SendUserFile, AskUserQuestion
+allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
 ---
 
 # Slide deck → narrated video
@@ -13,123 +13,116 @@ P="${CLAUDE_SKILL_DIR}/scripts"; VD="${XDG_DATA_HOME:-$HOME/.local/share}/build-
 The deck is the first argument. If there is none, ask for the path. Pass any `--device` /
 `--voice` arguments on to `generate` in step 4, and `--out` to `ingest` in step 2.
 
-The slides are the picture; the voice explains them. Nothing about the slides is redesigned:
-every slide is shown as exported, full frame, for as long as its explanation lasts.
+The slides are the picture; the voice explains them and the camera follows the voice. Slides are
+not redesigned, only framed, highlighted and annotated.
 
 The engine is [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) v3 Turbo (Apache-2.0),
 running on this machine: no API key, and no text leaves the machine. It is a Vietnamese model
 with English code-switching. If the deck is in English, tell the user the voice will be English
 spoken by a Vietnamese voice, and let them decide whether to go on.
 
-## 1. Voice engine (installs once)
+## 1. Voice engine and renderer (install once)
 ```bash
 bash "$P/setup-voice.sh" "$VD"
+bash "$P/setup-renderer.sh" "${CLAUDE_SKILL_DIR}" "$R"
 ```
-- Needs `uv` (the script says how to install it if it's missing).
-- Device: if `nvidia-smi` sees a GPU it installs the CUDA build (PyTorch, ~7 GB); on an Apple
-  Silicon Mac the PyTorch build that runs on the Mac's GPU (MPS, under 1 GB); otherwise the
-  torch-free CPU build (ONNX Runtime, a few hundred MB). `SVV_VOICE_DEVICE=cpu|gpu` forces one.
-  An identical install from the `feature-guide` plugin is linked instead of downloaded again.
-  Tell the user which device it picked.
-- The first install, and the first generate (it downloads the model), take a few minutes. Run
-  the install in the background and do steps 2–3 meanwhile.
+with `R="${XDG_DATA_HOME:-$HOME/.local/share}/build-video-voice/renderer"`.
+- Voice needs `uv`. If `nvidia-smi` sees a GPU it installs the CUDA build (PyTorch, ~7 GB); on
+  an Apple Silicon Mac the MPS build (under 1 GB); otherwise the CPU build (ONNX Runtime).
+  `SVV_VOICE_DEVICE=cpu|gpu` forces one. Tell the user which device it picked.
+- The renderer is a Remotion project (Node 20+). Both scripts link an identical install left by
+  the `feature-guide` plugin instead of downloading again.
+- First installs and the first generate take a few minutes: run them in the background and do
+  steps 2–3 meanwhile.
 
-## 2. Export the slides
+## 2. Export the slides and find their regions
 ```bash
 python3 -I "$P/slides.py" ingest "<deck>" [--out DIR]
+python3 -I "$P/slides.py" regions "$DIR"
 ```
-- Writes `slides/NN.png` (1920×1080 by default) and `slides.json` (each slide's on-screen text
-  and speaker notes) into the project dir, by default `<deck-dir>/<deck-name>-video/`.
-  Call it `$DIR` from here on.
-- **PDF**: `pdftoppm` / `pdftotext` (poppler). The most reliable input; when a conversion
-  struggles, ask the user to export the deck to PDF.
-- **.pptx / .ppt / .odp / .key**: converted with LibreOffice (`soffice`). Speaker notes are read
-  from a .pptx and used to seed the script. Hidden slides are left out.
-- **HTML deck**: each slide is screenshotted with headless Chrome at `<deck>#s1`, `#s2`, … (the
-  feature-guide keynote format; its `data-note` speaker notes are picked up). Other decks: set
-  `--url-pattern` (`'#/{i}'` for reveal.js, 0-based) and `--count N`. Raise `--wait-ms` if
-  animations are caught mid-way.
-- **Folder of images**: one slide per image, in natural sort order (`2.png` before `10.png`).
-- Slides that aren't 16:9 are letterboxed on `--bg` at render time.
+- `ingest` writes `slides/NN.png` (1920×1080) and `slides.json` (text + speaker notes) into
+  `<deck-dir>/<deck-name>-video/` by default. Call it `$DIR`.
+  - **PDF** (poppler) is the most reliable input. **.pptx/.ppt/.odp/.key** go through LibreOffice
+    (`soffice`); .pptx speaker notes seed the script. **HTML decks** are screenshotted with
+    headless Chrome at `#s1`, `#s2`, … (`--url-pattern '#/{i}'` for reveal.js, `--count N`).
+    **A folder of images** is one slide per image, natural order.
+- `regions` writes `regions.json`: numbered boxes (`r1`, `r2`, …) for every image and text block
+  on each slide, plus `regions/NN.png` overlays showing them. Only PDF-backed decks get regions;
+  for others, give focus boxes as `[x, y, w, h]` in slide pixels.
+- Look at every slide and its overlay (tile 4 per image with ffmpeg `xstack` to save context).
+  Check none is blank or cut off. Text the PDF hides behind other shapes also gets boxes —
+  ignore those. Block boxes can be coarse; for one line, read line boxes with
+  `pdftohtml -xml -i -f N -l N` and scale by 1920 / page width.
 
-Look at every exported slide with Read (they are images) and check none is blank, cut off or
-caught mid-animation before going on.
-
-## 3. Script: one explanation per slide
+## 3. Script: beats that point the camera
 ```bash
 "$PY" "$P/voice.py" draft "$DIR"
 ```
-This writes `$DIR/voice/script.json` with one scene per slide, in order, seeded with the
-slide's speaker notes, else its on-screen text. Seeds are raw material, not narration: rewrite
-every scene's `text` from the slide image and `slides.json`:
-- **Explain, don't read.** Say what the slide means and why it matters, in the order the eye
-  moves over it (title → main visual → details). Mention every number, chart or table the slide
-  shows and what it tells the viewer; don't recite each bullet word for word.
-- **Opening slide** carries the introduction: greet, name the topic and who it is for, and
-  outline what the video covers ("Video gồm ba phần: …"). About 15–25 s.
-- **Section and transition slides** open their part ("Phần hai: triển khai.").
-- **Closing slide** carries the conclusion: recap in one or two sentences, say where to get
-  help or what to do next, and thank the viewer.
-- Talk like a person presenting to a colleague: short spoken sentences, no bullet fragments,
-  no "slide này có…". Aim for ~2.5 words per second on screen time; keep every slide at least
-  ~3 s so viewers can read it, and dense slides long enough to take in.
-- Keep exactly one scene per slide with its `id`. To skip a slide, delete it from the deck
-  and re-ingest; don't leave a scene empty.
-- **`lexicon`**: written form → how it should be spoken. Add every acronym, symbol, unit,
-  email/URL and number the model would misread, e.g. `"CSV": "xê ét vê"`, `"KPI": "ka pê i"`,
-  `"%": " phần trăm"`, `"Q3": "quý ba"`, `" / ": ", "`. Keep `text` readable (it becomes the
-  subtitles); the lexicon is applied only at speak time.
-- **`voice`**: a preset name, or null for the default (Hải Đăng). Editors' picks: Hải Đăng,
-  Mai Anh, Thiện Minh, Trúc Ly, Thùy Dung, Ngọc Huyền, Quang Sơn, Ngọc Trân. `--voice`
-  overrides it.
+`voice/script.json` has one scene per slide, in order. Rewrite it:
+- **Keep it short.** Target ~2.5 words/s and roughly 5–8 s per content slide; a 25-slide deck
+  should land around 2–3 minutes. Explain what matters and skip what the viewer can read; never
+  read a rules slide line by line, pick the 2–3 rules people trip over.
+- **Beats.** Each scene is `beats: [{text, focus, callout?}]`, 1–4 beats. A beat is one or two
+  short spoken sentences, and `focus` is what the camera frames while it is spoken: a region id
+  (`"r3"`), several (`["r1","r2"]`, framed together), a box `[x,y,w,h]`, or `null` for the whole
+  slide. Follow the order the eye should move. `callout` is a short chip (≤ 30 chars) for the
+  number or button that must stick (`"Beginner 42 km · Advanced 84 km"`, `"Nhớ bấm Đồng bộ!"`).
+  Use it on a few beats, not all.
+- **Section slides** (a title-only divider) become animated chapter cards:
+  `"kind": "section", "section": {"n": 1, "title": "Thể lệ cuộc thi", "short": "Thể lệ"}`.
+  Numbered sections drive the chapter bar (`short` is its label); an aside without `n` takes
+  a `kicker` instead (`"Mẹo nhỏ"`). Give each one a single short beat ("Phần một: thể lệ.").
+- **Tone.** Lively and warm, like a colleague hyping a team event: short sentences,
+  exclamations, "bạn"/"mình", a question now and then. The opening slide greets and promises
+  what the viewer gets; the closing slide recaps in one line, says where to get help, signs off.
+  The model's cues `[cười]`, `[thở dài]`, `[hắng giọng]` work inline; use `[cười]` once at most.
+- **`lexicon`**: written form → spoken form for acronyms, units, dates, URLs and numbers
+  (`"km": "ki lô mét"`, `"IT": "ai ti"`, `"sports.techcoop.vn": "sports chấm techcoop chấm vi en"`).
+  Captions show the written `text`.
+- **Voice.** Prefer a natural-style voice (*Trúc Ly*, *Ngọc Huyền*, *Đoan Trang*, female;
+  *Hải Đăng*, *Quốc Tuấn*, male). The news-style ones (*Mai Anh*, *Thùy Dung*, *Minh Đức*) sound
+  flat on explainer videos. `speed` (default 1.08) and `temperature` (default 0.9) live in the
+  script too.
+- Optional `theme`: `{primary, deep, accent, light, highlight, ground}` colours; default teal/amber.
 
-Show the user the whole script, one block per slide (slide number + its first line of text +
-the narration), plus the voice name. Then ask (AskUserQuestion) whether to generate it as
-written. It is new spoken content the user has not seen, so don't skip this.
+Show the user the whole script (per slide: number, beats with their focus/callout) and the
+voice, then ask (AskUserQuestion) whether to generate it. It is new spoken content, so don't
+skip this.
 
 ## 4. Generate the voice
 ```bash
-"$PY" "$P/voice.py" generate "$DIR" [--device auto|cpu|gpu] [--voice "Mai Anh"]
+"$PY" "$P/voice.py" generate "$DIR" [--device auto|cpu|gpu] [--voice "Trúc Ly"] [--speed 1.1]
 ```
-- `--device auto` (default) uses the GPU (`cuda` or `mps`) and falls back to the CPU if the GPU
-  can't load the model or fails while speaking. Report the device it used and how long it took
-  (the GPU batches every slide together; the CPU runs about 2× real time).
-- Output: `voice/NN-<id>.wav` per slide, `voice/narration.wav` (all concatenated),
-  `voice/transcript.md` (start time and text per slide) and `voice/voice.json` (per-slide
-  `frames`/`startFrame` used by the render).
-- It prints one line per slide with its duration and flags any slide under 2.5 s; lengthen
-  that text.
-- `--lead` / `--tail` (default 0.4 s / 0.8 s) set the silence before and after each
-  explanation, i.e. the pause around each slide change. `--fps` (default 30).
+- Every beat is spoken separately (the GPU batches them all), stretched to `speed` without a
+  pitch change, then each slide's beats are joined with `--gap` (0.25 s) between them and
+  `--lead`/`--tail` (0.35 s / 0.55 s) around. Output: `voice/NN-<id>.wav`,
+  `voice/narration.wav`, `voice/transcript.md`, `voice/voice.json` (per-slide and per-beat
+  frames). Report the device and time.
+- To fix wording or pronunciation, edit `script.json` and re-speak only those slides:
+  `generate "$DIR" --only p03,p07`.
 
-Send `voice/narration.wav` with SendUserFile so the user can check pronunciation before any
-video is rendered. To fix a slide, edit its text or the lexicon, then re-speak only that one:
+## 5. Stills → draft → final
 ```bash
-"$PY" "$P/voice.py" generate "$DIR" --only p03,p07
+python3 -I "$P/slides.py" render "$DIR" --still <frame>      # → out/stills/fNNNNN.png (half size)
+python3 -I "$P/slides.py" render "$DIR" --draft              # → out/draft.mp4, 960×540
 ```
-The other clips are kept and the track and timings are rebuilt. A lexicon change touches every
-slide that contains the term; the command names any it needs.
-
-## 5. Draft → final
-```bash
-python3 -I "$P/slides.py" render "$DIR" --draft          # → $DIR/out/draft.mp4, 960×540, fast
-```
-Send the draft. Options, for draft and final alike:
-- `--subs soft` (default) adds a subtitle track viewers can switch on (from `text`, timed per
-  sentence); `--subs none` leaves it out.
-- `--motion zoom` adds a slow 4% push-in on every slide; `--fade 0.3` fades each slide in from
-  black. Default is a still slide with a hard cut, which suits text-heavy decks best.
-- `--bg '#ffffff'` sets the letterbox colour for slides that aren't 16:9.
-
-Fix wording, pronunciation or voice in `script.json` and `generate --only`. To change a slide's
-picture, fix the deck, then `ingest --force` → `draft --force` (re-apply the script edits) →
-`generate`. `generate` and `render` refuse to run on stale inputs and say which step to redo.
+The video is animated with Remotion: each slide arrives with a short settle-and-blur, the
+camera glides to each beat's focus and drifts slowly while it is spoken, a highlight ring dims
+the rest, callout chips pop in, section slides become chapter cards, a chapter bar and label run
+along the top, and captions show the beat being spoken. A soft subtitle track is muxed in too.
+- **Stills first.** For a few beats (with focus, with callouts, a section card), take frame
+  `scene.startFrame + beat.startFrame + 0.6·beat.frames` from `voice.json`, render them, tile
+  them and look: is the focus framed, readable, not under the caption, chip not covering what's
+  being said? Edit `focus`/`callout` in `script.json` and re-render; that needs no new voice.
+  Changing a beat's `text` does: `generate --only <id>` (`render` names the slides).
+- Then render the draft and give the user its path, plus `voice/narration.wav`.
+- Options: `--captions off`, `--progress off`, `--subs none`. `--engine ffmpeg` is a plain
+  fallback without Node (still slides, `--motion zoom`, `--fade 0.3`).
 
 **Final**, once the user approves the draft:
 ```bash
-python3 -I "$P/slides.py" render "$DIR" --out "<dest>/<deck-name>-voice.mp4" [same options]
+python3 -I "$P/slides.py" render "$DIR" --out "<dest>/<deck-name>-voice.mp4"
 ```
-Default `<dest>` is `$DIR/out/`. `render` prints the file's duration next to the voice's
-`totalSec`; they must match (it prints `OFF BY` otherwise). Copy `voice/transcript.md` next to
-the video as `<deck-name>-transcript.md`, then send the final file and tell the user its length,
-the voice and the device used.
+`render` prints the duration next to the voice's `totalSec`; they must match (`OFF BY`
+otherwise). Copy `voice/transcript.md` next to the video as `<deck-name>-transcript.md`, then
+give the user the path, length, voice and device.

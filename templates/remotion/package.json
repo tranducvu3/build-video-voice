@@ -1,0 +1,22 @@
+{
+  "name": "build-video-voice-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Remotion renderer for build-video-voice. Driven by props.json from slides.py render.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.482",
+    "@remotion/renderer": "4.0.482",
+    "remotion": "4.0.482",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "5.9.3"
+  }
+}
