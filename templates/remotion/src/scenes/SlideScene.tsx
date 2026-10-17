@@ -76,7 +76,7 @@ export const SlideScene = ({scene, slideW, theme, captions}: {scene: Scene; slid
   return (
     <AbsoluteFill style={{background: theme.ground, overflow: 'hidden', opacity: interpolate(frame, [0, 6], [0, 1], {extrapolateRight: 'clamp'})}}>
       <div style={{position: 'absolute', width: W, height: H, transformOrigin: '0 0', transform: `translate(${tx}px, ${ty}px) scale(${zz})`, filter: `blur(${(1 - enter) * 6}px)`}}>
-        <Img src={staticFile(scene.image)} style={{width: W, height: H, objectFit: 'contain'}} />
+        {scene.image && <Img src={staticFile(scene.image)} style={{width: W, height: H, objectFit: 'contain'}} />}
         {fb && (
           <div
             style={{

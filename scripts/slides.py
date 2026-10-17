@@ -361,7 +361,7 @@ def resolve_focus(f, regs, sid):
     return [x0, y0, max(b[0] + b[2] for b in xs) - x0, max(b[1] + b[3] for b in xs) - y0]
 
 
-def props(proj, sm, vm, script, captions, progress):
+def props(proj, sm, vm, script, captions, progress, bgm_choice=None):
     rp = proj / 'regions.json'
     regs = json.loads(rp.read_text()) if rp.exists() else {}
     fd = proj / '_assets' / 'fonts'
@@ -371,7 +371,7 @@ def props(proj, sm, vm, script, captions, progress):
         shutil.copy(f, fd / f.name)
         m = re.match(r'be-vietnam-pro-(\d+)-(.+)\.woff2', f.name)
         faces.append({'family': 'Be Vietnam Pro', 'weight': int(m.group(1)), 'url': f'_assets/fonts/{f.name}', 'unicodeRange': RANGES[m.group(2)]})
-    images = {s['id']: s['image'] for s in sm['slides']}
+    images = {s['id']: s.get('image', '') for s in sm.get('slides', [])}
     sections = [s for s in script['scenes'] if s.get('kind') == 'section']
     numbered = [s for s in sections if (s.get('section') or {}).get('n')]
     chapters, scenes = [], []
@@ -380,15 +380,57 @@ def props(proj, sm, vm, script, captions, progress):
             chapters.append({'title': (s.get('section') or {}).get('short') or s['section']['title'], 'startFrame': t['startFrame']})
         sec = dict(s['section'], of=len(numbered)) if s.get('section') else None
         scenes.append({
-            'id': s['id'], 'kind': s.get('kind', 'slide'), 'image': images[s['id']],
+            'id': s['id'], 'kind': s.get('kind', 'slide'), 'image': s.get('image') or images.get(s['id'], ''),
             'startFrame': t['startFrame'], 'frames': t['frames'], 'section': sec,
             'chapter': len(chapters) - 1 if chapters else None,
+            'title': s.get('title'),
+            'subtitle': s.get('subtitle'),
+            'badge': s.get('badge'),
+            'price': s.get('price'),
+            'originalPrice': s.get('originalPrice'),
+            'discount': s.get('discount'),
+            'rating': s.get('rating'),
+            'reviewsCount': s.get('reviewsCount'),
+            'soldCount': s.get('soldCount'),
+            'reviewQuote': s.get('reviewQuote'),
+            'reviewAuthor': s.get('reviewAuthor'),
+            'features': s.get('features'),
+            'ctaText': s.get('ctaText'),
+            'ctaSubtext': s.get('ctaSubtext'),
+            'ctaTarget': s.get('ctaTarget'),
+            'affiliateUrl': s.get('affiliateUrl') or script.get('affiliateUrl'),
             'beats': [{'startFrame': tb['startFrame'], 'frames': tb['frames'], 'text': plain(b['text']),
                        'focus': resolve_focus(b.get('focus'), regs, s['id']), 'callout': b.get('callout')}
                       for b, tb in zip(beats_of(s), t['beats'])],
         })
-    return {'fps': vm['fps'], 'width': 1920, 'height': 1080, 'slideWidth': sm['width'], 'slideHeight': sm['height'],
-            'audio': vm['audio'], 'captions': captions, 'progress': progress, 'theme': script.get('theme') or {},
+
+    # Dimensions
+    width = script.get('width') or sm.get('width', 1920)
+    height = script.get('height') or sm.get('height', 1080)
+    aspect_ratio = '9:16' if width < height else '16:9'
+
+    # Background music
+    bgm_setting = bgm_choice or script.get('bgm') or sm.get('bgm')
+    bgm_rel = None
+    if bgm_setting and bgm_setting != 'off':
+        aud_dir = proj / '_assets' / 'audio'
+        aud_dir.mkdir(parents=True, exist_ok=True)
+        if bgm_setting in ('upbeat', 'default', 'on', True):
+            src_bgm = SKILL / 'assets' / 'audio' / 'bgm-upbeat.mp3'
+            if src_bgm.exists():
+                shutil.copy(src_bgm, aud_dir / 'bgm.mp3')
+                bgm_rel = '_assets/audio/bgm.mp3'
+        elif Path(bgm_setting).exists():
+            shutil.copy(bgm_setting, aud_dir / Path(bgm_setting).name)
+            bgm_rel = f'_assets/audio/{Path(bgm_setting).name}'
+
+    bgm_vol = script.get('bgmVolume', 0.14)
+
+    return {'fps': vm['fps'], 'width': width, 'height': height,
+            'slideWidth': sm.get('width', width), 'slideHeight': sm.get('height', height),
+            'aspectRatio': aspect_ratio,
+            'audio': vm['audio'], 'bgm': bgm_rel, 'bgmVolume': bgm_vol,
+            'captions': captions, 'progress': progress, 'theme': script.get('theme') or {},
             'fonts': faces, 'chapters': chapters, 'scenes': scenes, 'totalFrames': vm['totalFrames']}
 
 
@@ -398,7 +440,8 @@ def render_remotion(a, proj, sm, vm, script, out):
         die(f'No renderer at {r}. Run: bash {SKILL}/scripts/setup-renderer.sh {SKILL} {r}')
     pj = proj / '_assets' / 'props.json'
     pj.parent.mkdir(parents=True, exist_ok=True)
-    pj.write_text(json.dumps(props(proj, sm, vm, script, a.captions == 'on', a.progress == 'on'), ensure_ascii=False))
+    bgm_opt = getattr(a, 'bgm', None)
+    pj.write_text(json.dumps(props(proj, sm, vm, script, a.captions == 'on', a.progress == 'on', bgm_opt), ensure_ascii=False))
     base = ['npx', 'remotion']
     common = ['src/index.ts', 'Slides', str(out), f'--props={pj}', f'--public-dir={proj}', '--log=error']
     if a.still is not None:
@@ -515,6 +558,7 @@ def main():
     pr.add_argument('--still', type=int, metavar='FRAME')
     pr.add_argument('--captions', choices=['on', 'off'], default='on')
     pr.add_argument('--progress', choices=['on', 'off'], default='on')
+    pr.add_argument('--bgm', default=None, help='Background music: upbeat, off, or path to audio file')
     pr.add_argument('--subs', choices=['soft', 'none'], default='soft')
     pr.add_argument('--motion', choices=['none', 'zoom'], default='none')
     pr.add_argument('--fade', type=float, default=0.0)

@@ -1,62 +1,73 @@
 # build-video-voice
 
-A Claude Code skill (`/build-video-voice`) that turns a slide deck you already have into an
-animated video with a voice-over that explains each slide.
+An AI skill (`/build-video-voice`) that transforms **e-commerce products (Shopee Affiliate)** or **slide decks (PDF, PPTX, HTML)** into animated, high-converting videos with lively spoken Vietnamese narration, powered locally by [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) v3 Turbo and rendered with Remotion.
 
-It is a customised version of `feature-guide:build-video-voice` from
-[Techcoop-vn/techcoop-claude-plugins](https://github.com/Techcoop-vn/techcoop-claude-plugins):
-the same local VieNeu-TTS voice engine, but the picture comes from an existing deck instead of
-a feature-guide storyboard, and the video is assembled with Remotion.
+---
 
-## What it does
+## 🌟 What It Does
 
-1. **Exports the slides and their regions** — PDF, PowerPoint/Keynote/ODP (via LibreOffice), an
-   HTML deck (e.g. a feature-guide keynote, via headless Chrome) or a folder of images → one
-   1920×1080 PNG per slide, plus each slide's text and speaker notes. For PDF decks it also
-   finds numbered regions (`r1`, `r2`, …) for every image and text block.
-2. **Writes the narration** — Claude drafts the script as *beats* per slide; each beat pairs one
-   or two spoken sentences with a `focus` (the region the camera frames while it is spoken) and
-   an optional callout chip, and the full script is shown for approval.
-3. **Speaks it locally** with [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) v3 Turbo
-   (Vietnamese, with English code-switching). GPU (NVIDIA CUDA / Apple MPS) when available,
-   otherwise CPU. No API key; no text leaves the machine.
-4. **Renders the video** — the camera zooms to whatever is being explained, with highlight
-   rings, callout chips, chapter cards, a chapter bar and captions, every slide timed to its
-   voice, plus a soft subtitle track and a transcript. Draft first, then final.
+### 1. 🛍️ Shopee Affiliate & Product Review Videos (NEW!)
+- **Product Search & Asset Downloader**: Enter any product keyword or Shopee link (`https://shopee.vn/...` or `https://s.shopee.vn/...`). The tool searches specs, pros, customer reviews, and downloads official high-res product photos from Shopee CDN (`*.susercontent.com`).
+- **Proven High-Converting Affiliate Formula**: Automatically generates an engaging storyboard and script:
+  1. `hook`: First 3-second scroll stopper with curiosity/warning badge (`🔥 CẢNH BÁO CHO TÍN ĐỒ SHOPEE`).
+  2. `product`: Hero showcase with Shopee Mall & Freeship Xtra badges, strikethrough original price, sale price, and animated `-35%` discount pill.
+  3. `feature`: Killer benefit spotlight and value proposition.
+  4. `feature`: Secondary everyday convenience.
+  5. `social_proof`: ⭐⭐⭐⭐⭐ 4.9/5.0 stars, `15.800+ Đã Bán`, and verified buyer review card.
+  6. `cta`: Shopee Orange closer, floating vouchers (`VOUCHER 50K`, `FREESHIP 0Đ`), and animated bouncing arrow pointing directly to the cart / bio affiliate link.
+- **9:16 Vertical Mobile Format (1080×1920)**: Built specifically for TikTok, Shopee Video, Facebook Reels, and YouTube Shorts (or 16:9 for landscape).
+- **Background Music (BGM)**: Built-in upbeat royalty-free background music automatically mixed and ducked under the voiceover.
+- **Copy-Paste Social Post**: Writes `affiliate_post.md` with viral caption, hashtags, and your Shopee affiliate link.
 
-## Install
+### 2. 📊 Slide Deck Explainer Videos
+- **Multi-format Ingest**: PDF, PowerPoint/Keynote/ODP (via LibreOffice), HTML keynotes (headless Chrome), or images folder.
+- **Region Detection**: Automatically detects bounding boxes for diagrams, images, and text.
+- **Camera Movement**: Zooms into whatever is being explained with highlight rings and callout chips.
 
-Clone it as a personal skill, so it is available as `/build-video-voice` in every project:
+### 3. 🎙️ 100% Local & Fast Voice (VieNeu-TTS)
+- Runs locally on GPU (NVIDIA CUDA / Apple MPS) or CPU.
+- Zero API key required, zero data leaves your machine.
+- Natural Vietnamese voices: **Trúc Ly** (high-energy affiliate creator), **Ngọc Huyền** (friendly female), **Hải Đăng** (tech reviewer male), and **Quốc Tuấn** (warm male).
+- Full pronunciation lexicon for acronyms ("Type-C", "RGB", "GB", "Shopee" → "sô pi") and prices ("890k" → "tám trăm chín mươi cành").
+
+---
+
+## 🚀 Quick Start
+
+### Create a Shopee Affiliate Video in 3 Steps:
 
 ```bash
-git clone git@github.com:tranducvu3/slide-video-voice.git ~/.claude/skills/build-video-voice
+# 1. Search product, download high-res images, and create project
+python3 scripts/product.py create "Bàn phím cơ Aula F75" \
+  --format 9:16 \
+  --price "890.000₫" \
+  --original-price "1.350.000₫" \
+  --discount "-34%" \
+  --affiliate-url "https://s.shopee.vn/YOUR_AFFILIATE_LINK" \
+  --cta-location cart
+
+# 2. Speak narration (takes ~15-20s on GPU)
+~/.local/share/build-video-voice/voice/.venv/bin/python scripts/voice.py generate aula-f75-affiliate-video --voice "Trúc Ly"
+
+# 3. Render 1080x1920 MP4 with upbeat music
+python3 scripts/slides.py render aula-f75-affiliate-video --out out/aula-f75.mp4 --bgm upbeat
 ```
 
-Update with `git -C ~/.claude/skills/build-video-voice pull`. Then:
-`/build-video-voice path/to/deck.pdf`
+---
 
-The voice engine installs once into `~/.local/share/build-video-voice/voice`, and the Remotion
-renderer once into `~/.local/share/build-video-voice/renderer` (both outside the skill folder,
-so updates keep them).
+## 📦 Scripts Overview
 
-## Requirements
+- `scripts/product.py create|search|fetch`: Product search, Shopee image download, affiliate script generation, and social post caption.
+- `scripts/voice.py draft|generate`: VieNeu-TTS local speech synthesis with custom voice, speed, and pronunciation lexicon.
+- `scripts/slides.py ingest|regions|render`: Remotion video rendering with support for 9:16 vertical and 16:9 horizontal, BGM audio mixing, and subtitle generation.
+- `scripts/setup-voice.sh`: One-time local voice environment setup.
+- `scripts/setup-renderer.sh`: One-time Remotion renderer setup.
 
-- `ffmpeg` / `ffprobe`, Python 3.10+
-- `uv` (installs the voice engine once into the plugin data dir; ~7 GB for the CUDA build,
-  a few hundred MB for CPU — an identical install left by `feature-guide` is reused)
-- Node 20+ (the Remotion renderer; an identical install left by `feature-guide` is reused)
-- PDF decks: poppler (`pdftoppm`, `pdftotext`, `pdfinfo`)
-- PowerPoint / Keynote / ODP decks: LibreOffice (`soffice`)
-- HTML decks: Google Chrome or Chromium
+---
 
-## Scripts
+## 🛠️ Requirements
 
-- `SKILL.md` — the workflow Claude follows
-- `scripts/slides.py ingest <deck>` — export slides → `<deck>-video/slides/`, `slides.json`
-- `scripts/slides.py regions <project>` — find the numbered regions → `regions.json`, overlays
-- `scripts/voice.py draft|generate <project>` — narration script and voice clips
-- `scripts/slides.py render <project> [--draft] [--still <frame>] [--captions off] [--subs none]`
-- `scripts/setup-voice.sh <voice-dir>` — one-time voice engine install
-- `scripts/setup-renderer.sh <skill-dir> <renderer-dir>` — one-time Remotion renderer install
-
-The voice engine is Apache-2.0; see its repository for model terms.
+- `ffmpeg`, `ffprobe`, Python 3.10+
+- `uv` (installs the voice engine into `~/.local/share/build-video-voice/voice`)
+- Node 20+ (Remotion renderer in `~/.local/share/build-video-voice/renderer`)
+- Optional: LibreOffice for `.pptx/.key` decks, Poppler for PDF decks.

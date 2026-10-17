@@ -19,7 +19,7 @@ const pieces = (text: string) => {
   return out;
 };
 
-export const Captions = ({beats, theme}: {beats: Beat[]; theme: Theme}) => {
+export const Captions = ({beats, theme, isVertical = false}: {beats: Beat[]; theme: Theme; isVertical?: boolean}) => {
   const frame = useCurrentFrame();
   let cue: {text: string; start: number; end: number} | null = null;
   for (const b of beats) {
@@ -34,21 +34,40 @@ export const Captions = ({beats, theme}: {beats: Beat[]; theme: Theme}) => {
   }
   if (!cue) return null;
   const o = interpolate(frame, [cue.start, cue.start + 5, cue.end, cue.end + 4], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+
+  const bottomPos = isVertical ? 240 : 54;
+  const sideMargin = isVertical ? 40 : 120;
+  const fontSize = isVertical ? 46 : 40;
+
   return (
-    <div style={{position: 'absolute', left: 120, right: 120, bottom: 54, display: 'flex', justifyContent: 'center', opacity: o, transform: `translateY(${(1 - o) * 14}px)`}}>
+    <div
+      style={{
+        position: 'absolute',
+        left: sideMargin,
+        right: sideMargin,
+        bottom: bottomPos,
+        display: 'flex',
+        justifyContent: 'center',
+        opacity: o,
+        transform: `translateY(${(1 - o) * 14}px)`,
+        zIndex: 50,
+      }}
+    >
       <div
         style={{
-          background: 'rgba(5,60,66,0.92)',
-          color: '#fff',
+          background: isVertical ? 'rgba(15, 15, 18, 0.92)' : 'rgba(5, 60, 66, 0.92)',
+          color: '#ffffff',
           fontFamily: theme.font,
-          fontWeight: 600,
-          fontSize: 40,
+          fontWeight: 700,
+          fontSize: fontSize,
           lineHeight: 1.35,
-          padding: '14px 30px',
-          borderRadius: 16,
-          maxWidth: 1500,
+          padding: isVertical ? '16px 36px' : '14px 30px',
+          borderRadius: 20,
+          maxWidth: isVertical ? 960 : 1500,
           textAlign: 'center',
-          boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+          border: isVertical ? '2px solid rgba(255, 215, 0, 0.4)' : 'none',
+          textShadow: '0 2px 8px rgba(0,0,0,0.6)',
         }}
       >
         {cue.text}
