@@ -372,6 +372,7 @@ def props(proj, sm, vm, script, captions, progress, bgm_choice=None):
         m = re.match(r'be-vietnam-pro-(\d+)-(.+)\.woff2', f.name)
         faces.append({'family': 'Be Vietnam Pro', 'weight': int(m.group(1)), 'url': f'_assets/fonts/{f.name}', 'unicodeRange': RANGES[m.group(2)]})
     images = {s['id']: s.get('image', '') for s in sm.get('slides', [])}
+    videos = {s['id']: s.get('video', '') for s in sm.get('slides', [])}
     sections = [s for s in script['scenes'] if s.get('kind') == 'section']
     numbered = [s for s in sections if (s.get('section') or {}).get('n')]
     chapters, scenes = [], []
@@ -380,7 +381,9 @@ def props(proj, sm, vm, script, captions, progress, bgm_choice=None):
             chapters.append({'title': (s.get('section') or {}).get('short') or s['section']['title'], 'startFrame': t['startFrame']})
         sec = dict(s['section'], of=len(numbered)) if s.get('section') else None
         scenes.append({
-            'id': s['id'], 'kind': s.get('kind', 'slide'), 'image': s.get('image') or images.get(s['id'], ''),
+            'id': s['id'], 'kind': s.get('kind', 'slide'),
+            'image': s.get('image') or images.get(s['id'], ''),
+            'video': s.get('video') or videos.get(s['id'], ''),
             'startFrame': t['startFrame'], 'frames': t['frames'], 'section': sec,
             'chapter': len(chapters) - 1 if chapters else None,
             'title': s.get('title'),

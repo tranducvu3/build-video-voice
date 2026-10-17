@@ -52,7 +52,7 @@ export const SocialProofScene = ({scene, theme, isVertical}: {scene: Scene; them
           top: isVertical ? 130 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 480 : 160,
+          bottom: isVertical ? 580 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -69,14 +69,14 @@ export const SocialProofScene = ({scene, theme, isVertical}: {scene: Scene; them
               marginBottom: 16,
             }}
           >
-            <StarRating rating={rating} count={`${reviewsCount} đánh giá`} scale={isVertical ? 1.5 : 1.3} />
+            <StarRating rating={rating} count={`${reviewsCount} đánh giá`} scale={isVertical ? 1.4 : 1.3} />
           </div>
 
           <div
             style={{
               opacity: countIn,
               transform: `translateY(${(1 - countIn) * 20}px)`,
-              fontSize: isVertical ? 48 : 56,
+              fontSize: isVertical ? 42 : 56,
               fontWeight: 900,
               color: '#ffffff',
               letterSpacing: '-0.01em',
@@ -85,7 +85,7 @@ export const SocialProofScene = ({scene, theme, isVertical}: {scene: Scene; them
           >
             🔥 ĐÃ BÁN HƠN <span style={{color: '#ff5722'}}>{soldCount}</span> CHIẾC!
           </div>
-          <div style={{fontSize: isVertical ? 24 : 24, color: '#e0e0e0', fontWeight: 500, marginTop: 8}}>
+          <div style={{fontSize: isVertical ? 22 : 24, color: '#e0e0e0', fontWeight: 500, marginTop: 8}}>
             99% khách hàng hài lòng và đánh giá 5 sao
           </div>
         </div>
@@ -98,7 +98,7 @@ export const SocialProofScene = ({scene, theme, isVertical}: {scene: Scene; them
             background: 'rgba(255, 255, 255, 0.08)',
             border: '2px solid rgba(255, 215, 0, 0.3)',
             borderRadius: 30,
-            padding: isVertical ? '22px 28px' : '28px 40px',
+            padding: isVertical ? '18px 24px' : '28px 40px',
             maxWidth: isVertical ? 860 : 1000,
             boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,215,0,0.15)',
             backdropFilter: 'blur(20px)',
@@ -122,11 +122,11 @@ export const SocialProofScene = ({scene, theme, isVertical}: {scene: Scene; them
 
           <div
             style={{
-              fontSize: isVertical ? 34 : 32,
+              fontSize: isVertical ? 28 : 32,
               fontWeight: 600,
-              lineHeight: 1.45,
+              lineHeight: 1.4,
               color: '#ffffff',
-              marginBottom: 20,
+              marginBottom: 16,
               marginTop: 10,
             }}
           >

@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {Scene} from '../types';
 import type {Theme} from '../theme';
 import {Captions} from './Captions';
@@ -51,7 +51,7 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
           top: isVertical ? 140 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 410 : 160,
+          bottom: isVertical ? 580 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -78,14 +78,14 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
           ✦ {callout}
         </div>
 
-        {/* Center: High-Res Feature Visual */}
-        {scene.image && (
+        {/* Center: High-Res Feature Visual (Video or Image) */}
+        {(scene.video || scene.image) && (
           <div
             style={{
               opacity: imgIn,
               transform: `scale(${imgIn * zoom})`,
-              width: isVertical ? 700 : 580,
-              height: isVertical ? 700 : 450,
+              width: isVertical ? 580 : 580,
+              height: isVertical ? 580 : 450,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -94,18 +94,31 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
               border: '2px solid rgba(45, 212, 191, 0.35)',
               boxShadow: '0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(45, 212, 191, 0.2)',
               overflow: 'hidden',
-              padding: 20,
+              padding: scene.video ? 0 : 20,
             }}
           >
-            <Img
-              src={staticFile(scene.image)}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.5))',
-              }}
-            />
+            {scene.video ? (
+              <OffthreadVideo
+                src={staticFile(scene.video)}
+                volume={0}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: 36,
+                }}
+              />
+            ) : (
+              <Img
+                src={staticFile(scene.image!)}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.5))',
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -117,17 +130,17 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
             background: 'rgba(20, 24, 33, 0.85)',
             border: '1.5px solid rgba(255, 255, 255, 0.15)',
             borderRadius: 28,
-            padding: isVertical ? '24px 36px' : '20px 32px',
+            padding: isVertical ? '18px 28px' : '20px 32px',
             textAlign: 'center',
             maxWidth: isVertical ? 920 : 1100,
             boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
             backdropFilter: 'blur(16px)',
           }}
         >
-          <div style={{fontSize: isVertical ? 42 : 44, fontWeight: 800, color: '#ffffff', marginBottom: 10}}>
+          <div style={{fontSize: isVertical ? 38 : 44, fontWeight: 800, color: '#ffffff', marginBottom: 8}}>
             {title}
           </div>
-          <div style={{fontSize: isVertical ? 28 : 26, color: '#9ccdd4', fontWeight: 500, lineHeight: 1.35}}>
+          <div style={{fontSize: isVertical ? 24 : 26, color: '#9ccdd4', fontWeight: 500, lineHeight: 1.35}}>
             {subtitle}
           </div>
         </div>

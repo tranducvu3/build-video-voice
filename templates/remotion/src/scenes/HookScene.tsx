@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {Scene} from '../types';
 import type {Theme} from '../theme';
 import {Captions} from './Captions';
@@ -55,7 +55,7 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
           top: isVertical ? 140 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 420 : 180,
+          bottom: isVertical ? 580 : 180,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -73,13 +73,13 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
               background: 'linear-gradient(90deg, #ff5722 0%, #ee4d2d 100%)',
               color: '#ffffff',
               fontWeight: 800,
-              fontSize: isVertical ? 28 : 24,
-              padding: isVertical ? '12px 28px' : '8px 24px',
+              fontSize: isVertical ? 26 : 24,
+              padding: isVertical ? '10px 26px' : '8px 24px',
               borderRadius: 999,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
               boxShadow: '0 8px 24px rgba(238, 77, 45, 0.45)',
-              marginBottom: isVertical ? 24 : 16,
+              marginBottom: isVertical ? 18 : 16,
             }}
           >
             {badgeText}
@@ -90,7 +90,7 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
             style={{
               opacity: textIn,
               transform: `translateY(${(1 - textIn) * 30}px)`,
-              fontSize: isVertical ? 64 : 68,
+              fontSize: isVertical ? 52 : 68,
               fontWeight: 900,
               lineHeight: 1.15,
               textTransform: 'uppercase',
@@ -108,10 +108,10 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
               style={{
                 opacity: textIn,
                 transform: `translateY(${(1 - textIn) * 20}px)`,
-                fontSize: isVertical ? 32 : 32,
+                fontSize: isVertical ? 26 : 32,
                 fontWeight: 600,
                 color: theme.highlight,
-                marginTop: isVertical ? 16 : 12,
+                marginTop: isVertical ? 12 : 12,
                 textShadow: '0 2px 10px rgba(0,0,0,0.6)',
               }}
             >
@@ -120,8 +120,8 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
           )}
         </div>
 
-        {/* Hero Product Preview Card */}
-        {scene.image && (
+        {/* Hero Product Preview Card (Video or Image) */}
+        {(scene.video || scene.image) && (
           <div
             style={{
               opacity: imgIn,
@@ -129,26 +129,39 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: isVertical ? 720 : 640,
-              height: isVertical ? 720 : 540,
+              width: isVertical ? 580 : 640,
+              height: isVertical ? 580 : 540,
               background: 'rgba(255, 255, 255, 0.05)',
               borderRadius: 36,
               border: '2px solid rgba(238, 77, 45, 0.4)',
               boxShadow: '0 24px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(238, 77, 45, 0.25)',
               backdropFilter: 'blur(16px)',
               overflow: 'hidden',
-              padding: 24,
+              padding: scene.video ? 0 : 24,
             }}
           >
-            <Img
-              src={staticFile(scene.image)}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.5))',
-              }}
-            />
+            {scene.video ? (
+              <OffthreadVideo
+                src={staticFile(scene.video)}
+                volume={0}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: 36,
+                }}
+              />
+            ) : (
+              <Img
+                src={staticFile(scene.image!)}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.5))',
+                }}
+              />
+            )}
           </div>
         )}
       </div>

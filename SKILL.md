@@ -43,16 +43,18 @@ python3 -I "$P/product.py" create "<product-name-or-url>" \
   [--format 9:16|16:9] \
   [--affiliate-url "https://s.shopee.vn/..."] \
   [--cta-location cart|bio|comment|description] \
+  [--video "<video-url-or-file>"] \
   [--price "790.000₫"] [--original-price "1.200.000₫"] [--discount "-35%"] \
   [--voice "Trúc Ly"|"Hải Đăng"] [--speed 1.12] [--bgm upbeat|off]
 ```
 - **9:16 Vertical (1080×1920)** is the default and recommended format for TikTok, Shopee Video, Facebook Reels, and YouTube Shorts.
 - **Auto-Search**: Gathers specs, pros/cons, user reviews, and pricing.
 - **Asset Downloader**: Downloads high-res product photos from Shopee CDN (`*.susercontent.com`) into `$DIR/slides/01.png`, `02.png`, etc.
+- **Product Video Reuse (Show Once Only)**: If the product has a video on Shopee (VOD CDN or `video_info_list`), it automatically detects and downloads it, strips the original audio (`ffmpeg -an`) to prevent clash with narration/BGM, and displays it **exactly once** in the main `product` hero showcase scene. The video is never repeated across multiple scenes or looped unnecessarily, keeping visual engagement fresh and avoiding repetitive footage. Subsequent feature scenes use high-res graphic slides. Can also be provided manually via `--video <url-or-path>`.
 - **Affiliate Scenes Formula**:
   1. `hook`: Scroll-stopping question/warning (`🔥 CẢNH BÁO CHO TÍN ĐỒ SHOPEE`, `ĐỪNG VỘI MUA... KHI CHƯA XEM HẾT!`).
-  2. `product`: Hero showcase with Shopee Mall & Freeship Xtra badges, price tag, discount pill (`-35%`), and feature tags.
-  3. `feature`: Killer benefit spotlight with high-res zoom and value proposition.
+  2. `product`: Hero showcase with Shopee Mall & Freeship Xtra badges, live product demonstration video (shown once), price tag, discount pill (`-35%`), and feature tags.
+  3. `feature`: Killer benefit spotlight with high-res zoom visual and value proposition.
   4. `feature`: Secondary benefit / everyday convenience.
   5. `social_proof`: ⭐⭐⭐⭐⭐ 4.9/5.0 stars, `15.800+ Đã Bán`, and verified buyer review bubble.
   6. `cta`: Shopee Orange closer, animated bouncing arrow pointing to the affiliate link/cart, voucher reminders (`Voucher 50k`, `Freeship 0đ`), and urgency callout.

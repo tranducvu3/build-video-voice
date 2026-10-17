@@ -58,7 +58,7 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
           top: isVertical ? 140 : 70,
           left: 0,
           right: 0,
-          bottom: isVertical ? 480 : 160,
+          bottom: isVertical ? 580 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -74,7 +74,7 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
               transform: `scale(${bagIn})`,
             }}
           >
-            <ShopeeBagIcon size={isVertical ? 180 : 140} />
+            <ShopeeBagIcon size={isVertical ? 140 : 140} />
           </div>
 
           {/* Floating Voucher Badges */}
@@ -86,7 +86,7 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
               background: '#ffd700',
               color: '#d0011b',
               fontWeight: 900,
-              fontSize: isVertical ? 24 : 20,
+              fontSize: isVertical ? 22 : 20,
               padding: '8px 18px',
               borderRadius: 12,
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
@@ -104,7 +104,7 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
               background: '#00bfa5',
               color: '#ffffff',
               fontWeight: 900,
-              fontSize: isVertical ? 24 : 20,
+              fontSize: isVertical ? 22 : 20,
               padding: '8px 18px',
               borderRadius: 12,
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
@@ -121,13 +121,13 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
             style={{
               opacity: titleIn,
               transform: `translateY(${(1 - titleIn) * 30}px)`,
-              fontSize: isVertical ? 60 : 64,
+              fontSize: isVertical ? 50 : 64,
               fontWeight: 900,
               lineHeight: 1.15,
               textTransform: 'uppercase',
               letterSpacing: '-0.02em',
               textShadow: '0 6px 30px rgba(0,0,0,0.6)',
-              marginBottom: 20,
+              marginBottom: 16,
             }}
           >
             {ctaText}
@@ -140,9 +140,9 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
               transform: `scale(${btnIn})`,
               background: '#ffd700',
               color: '#1a1a1a',
-              fontSize: isVertical ? 42 : 38,
+              fontSize: isVertical ? 34 : 38,
               fontWeight: 900,
-              padding: isVertical ? '22px 50px' : '18px 44px',
+              padding: isVertical ? '16px 40px' : '18px 44px',
               borderRadius: 999,
               boxShadow: '0 16px 45px rgba(0, 0, 0, 0.45), 0 0 40px rgba(255, 215, 0, 0.6)',
               letterSpacing: '0.02em',
@@ -158,13 +158,13 @@ export const CtaScene = ({scene, theme, isVertical}: {scene: Scene; theme: Theme
           {/* Where to click text */}
           <div
             style={{
-              marginTop: 28,
-              fontSize: isVertical ? 34 : 30,
+              marginTop: isVertical ? 18 : 28,
+              fontSize: isVertical ? 26 : 30,
               fontWeight: 800,
               color: '#ffffff',
               textShadow: '0 2px 14px rgba(0,0,0,0.8)',
               background: 'rgba(0, 0, 0, 0.4)',
-              padding: '12px 28px',
+              padding: isVertical ? '10px 24px' : '12px 28px',
               borderRadius: 20,
               backdropFilter: 'blur(8px)',
             }}

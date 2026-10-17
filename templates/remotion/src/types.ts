@@ -14,6 +14,8 @@ export type Scene = {
   id: string;
   kind: SceneKind;
   image?: string; // public-dir relative
+  video?: string; // public-dir relative video path
+  videoDuration?: number;
   startFrame: number;
   frames: number;
   title?: string;

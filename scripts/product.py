@@ -163,6 +163,58 @@ def download_and_convert_images(urls, dest_dir, max_count=6):
     return saved
 
 
+def find_product_videos(query_or_url):
+    """Auto-detect product videos from Shopee URL or page content."""
+    videos = []
+    if not query_or_url.startswith(('http://', 'https://')):
+        return videos
+    try:
+        full_url = resolve_url(query_or_url)
+        content, _ = http_get(full_url)
+        # 1. Search for direct vod.susercontent.com mp4 urls
+        direct_urls = re.findall(r'https?://[^\s\"\'<>]*(?:vod\.susercontent\.com|mms\.vod)[^\s\"\'<>]+\.mp4', content)
+        for u in direct_urls:
+            u = u.replace('\\', '')
+            if u not in videos:
+                videos.append(u)
+
+        # 2. Search for vid in video_info_list
+        vids = re.findall(r'\"vid\":\s*\"([^\"]+)\"', content)
+        for v in vids:
+            v_url = f'https://mms.vod.susercontent.com/api/v4/11110106/mms/{v}.default.mp4'
+            if v_url not in videos:
+                videos.append(v_url)
+    except Exception as e:
+        print(f'Warning: video detection failed ({e})', file=sys.stderr)
+    return videos
+
+
+def download_product_video(url, dest_file):
+    """Download product video and remove audio track to keep narration crystal clear."""
+    dest_file = Path(dest_file)
+    dest_file.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                tmp_path.write_bytes(resp.read())
+
+            # Mute audio track so it doesn't conflict with VieNeu-TTS voice & upbeat BGM
+            cmd = ['ffmpeg', '-v', 'error', '-y', '-i', str(tmp_path), '-c:v', 'copy', '-an', str(dest_file)]
+            r = subprocess.run(cmd, capture_output=True, text=True)
+            if r.returncode == 0 and dest_file.exists() and dest_file.stat().st_size > 1000:
+                return dest_file
+            shutil.copy(tmp_path, dest_file)
+            return dest_file
+        except Exception as e:
+            print(f'Warning: failed to download video {url}: {e}', file=sys.stderr)
+            return None
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+
+
 def generate_affiliate_copy(product_name, info, options):
     """Generate high-converting Vietnamese affiliate script with proven e-commerce formula."""
     price = options.get('price') or 'giá cực hời'
@@ -366,7 +418,9 @@ Mấy bà đang tìm một em {product_name} vừa bền đẹp, vừa chuẩn c
 def create_project(query, options):
     """Full workflow: search, download assets, create scenes, generate script and affiliate post."""
     # Step 1: Resolve URL or detect keyword
-    if query.startswith(('http://', 'https://')):
+    if options.get('title'):
+        product_name = clean_product_title(options['title'])
+    elif query.startswith(('http://', 'https://')):
         full_url = resolve_url(query)
         slug_m = re.search(r'shopee\.vn/([^?]+)', full_url)
         raw_slug = slug_m.group(1) if slug_m else 'san-pham-shopee'
@@ -387,18 +441,46 @@ def create_project(query, options):
     print('🔍 Searching product information and specs...')
     info = search_web_info(product_name)
 
-    print('🖼️ Finding high-res product images from Shopee...')
     image_count = int(options.get('image_count') or 6)
-    img_urls = search_images(product_name, max_count=image_count + 4)
-    if not img_urls:
-        print('Warning: No images found via Bing, searching generic product photos...', file=sys.stderr)
-        img_urls = search_images(query, max_count=image_count + 2)
+    if options.get('images'):
+        print(f'🖼️ Using {len(options["images"])} provided product images...')
+        img_urls = options['images']
+    else:
+        print('🖼️ Finding high-res product images from Shopee...')
+        img_urls = search_images(product_name, max_count=image_count + 4)
+        if not img_urls:
+            print('Warning: No images found via Bing, searching generic product photos...', file=sys.stderr)
+            img_urls = search_images(query, max_count=image_count + 2)
 
     # Step 3: Download and convert images into slides/
     print(f'📥 Downloading {min(len(img_urls), image_count)} images to {slides_dir}...')
     downloaded = download_and_convert_images(img_urls, slides_dir, max_count=image_count)
     if not downloaded:
         die('Failed to download any product images. Check your network or try another search keyword.')
+
+    # Step 3b: Detect & download product video to reuse in video
+    video_path_rel = None
+    video_src = options.get('video')
+    if not video_src and query.startswith(('http://', 'https://')):
+        print('🎥 Checking if product has demonstration video...')
+        found_vids = find_product_videos(query)
+        if found_vids:
+            video_src = found_vids[0]
+            print(f'🎬 Found product video: {video_src}')
+
+    if video_src:
+        target_vid = slides_dir / 'video.mp4'
+        if Path(video_src).exists():
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(video_src), '-c:v', 'copy', '-an', str(target_vid)])
+            if target_vid.exists() and target_vid.stat().st_size > 1000:
+                video_path_rel = 'slides/video.mp4'
+                print(f'🎬 Reusing local product video: {target_vid}')
+        elif str(video_src).startswith(('http://', 'https://')):
+            print(f'📥 Downloading product video from {video_src}...')
+            saved = download_product_video(video_src, target_vid)
+            if saved:
+                video_path_rel = 'slides/video.mp4'
+                print(f'✅ Product video downloaded to {target_vid}')
 
     # Step 4: Setup dimensions (9:16 vertical default, or 16:9)
     fmt = options.get('format', '9:16')
@@ -415,6 +497,23 @@ def create_project(query, options):
         img_idx = idx % len(downloaded) + 1
         sc['image'] = f'slides/{img_idx:02d}.png'
 
+    # If product video is available, show it EXACTLY ONCE (never repeat across multiple scenes)
+    if video_path_rel:
+        video_assigned = False
+        # Priority 1: Show video in the main 'product' hero showcase scene
+        for sc in scenes:
+            if sc['kind'] == 'product':
+                sc['video'] = video_path_rel
+                video_assigned = True
+                break
+        # Priority 2: Fallback to the first 'feature' scene if no 'product' scene exists
+        if not video_assigned:
+            for sc in scenes:
+                if sc['kind'] == 'feature':
+                    sc['video'] = video_path_rel
+                    video_assigned = True
+                    break
+
     # Build slides manifest
     slides_manifest = {
         'source': query,
@@ -425,9 +524,10 @@ def create_project(query, options):
             'name': product_name,
             'affiliateUrl': options.get('affiliate_url', ''),
             'ctaLocation': options.get('cta_location', 'cart'),
+            'video': video_path_rel or '',
         },
         'slides': [
-            {'id': s['id'], 'image': s['image'], 'text': s['beats'][0]['text'], 'notes': ''}
+            {'id': s['id'], 'image': s['image'], 'video': s.get('video', ''), 'text': s['beats'][0]['text'], 'notes': ''}
             for s in scenes
         ],
     }
@@ -492,9 +592,11 @@ def main():
     pf = sub.add_parser('fetch', help='Fetch info from Shopee URL')
     pf.add_argument('url', help='Shopee product URL')
 
-    # Create command
     pc = sub.add_parser('create', help='Create affiliate video project')
     pc.add_argument('query', help='Product name, keyword, or Shopee URL')
+    pc.add_argument('--title', help='Override product title')
+    pc.add_argument('--images', nargs='*', help='Explicit image URLs or paths to use')
+    pc.add_argument('--video', help='Product video URL or file path to reuse in scenes')
     pc.add_argument('--out', help='Output directory')
     pc.add_argument('--format', choices=['9:16', '16:9'], default='9:16', help='Video aspect ratio (default: 9:16 vertical)')
     pc.add_argument('--affiliate-url', default='', help='Shopee affiliate link')
@@ -524,9 +626,13 @@ def main():
         name = clean_product_title(raw_name)
         info = search_web_info(name)
         imgs = search_images(name)
-        print(json.dumps({'name': name, 'url': full_url, 'info': info, 'images': imgs}, ensure_ascii=False, indent=2))
+        vids = find_product_videos(full_url)
+        print(json.dumps({'name': name, 'url': full_url, 'info': info, 'images': imgs, 'videos': vids}, ensure_ascii=False, indent=2))
     elif a.cmd == 'create':
         opts = {
+            'title': a.title,
+            'images': a.images,
+            'video': a.video,
             'out': a.out,
             'format': a.format,
             'affiliate_url': a.affiliate_url,

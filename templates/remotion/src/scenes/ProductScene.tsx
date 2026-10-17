@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {Scene} from '../types';
 import type {Theme} from '../theme';
 import {ShopeeMallBadge, FreeShipBadge} from './Badges';
@@ -54,7 +54,7 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
           top: isVertical ? 130 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 480 : 160,
+          bottom: isVertical ? 580 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -81,7 +81,7 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
             style={{
               opacity: titleIn,
               transform: `translateY(${(1 - titleIn) * 25}px)`,
-              fontSize: isVertical ? 48 : 54,
+              fontSize: isVertical ? 44 : 54,
               fontWeight: 800,
               lineHeight: 1.2,
               letterSpacing: '-0.01em',
@@ -93,15 +93,15 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
           </div>
         </div>
 
-        {/* Center: Hero Product Image with 3D Float */}
-        {scene.image && (
+        {/* Center: Hero Product Visual (Video or Image) with 3D Float */}
+        {(scene.video || scene.image) && (
           <div
             style={{
               opacity: imgIn,
               transform: `scale(${imgIn * zoom}) translateY(${floatY}px)`,
               position: 'relative',
-              width: isVertical ? 600 : 560,
-              height: isVertical ? 560 : 440,
+              width: isVertical ? 540 : 560,
+              height: isVertical ? 500 : 440,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -109,18 +109,32 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
               borderRadius: 36,
               border: '1.5px solid rgba(255, 255, 255, 0.12)',
               boxShadow: '0 30px 70px rgba(0, 0, 0, 0.65), 0 0 40px rgba(238, 77, 45, 0.15)',
-              padding: 24,
+              overflow: 'hidden',
+              padding: scene.video ? 0 : 24,
             }}
           >
-            <Img
-              src={staticFile(scene.image)}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))',
-              }}
-            />
+            {scene.video ? (
+              <OffthreadVideo
+                src={staticFile(scene.video)}
+                volume={0}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: 36,
+                }}
+              />
+            ) : (
+              <Img
+                src={staticFile(scene.image!)}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))',
+                }}
+              />
+            )}
 
             {/* Discount sticker in corner */}
             {scene.discount && (
@@ -157,19 +171,19 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
                 alignItems: 'baseline',
                 gap: 16,
                 background: 'rgba(0, 0, 0, 0.55)',
-                padding: isVertical ? '12px 36px' : '10px 30px',
+                padding: isVertical ? '10px 32px' : '10px 30px',
                 borderRadius: 999,
                 border: '1.5px solid rgba(238, 77, 45, 0.5)',
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)',
-                marginBottom: 20,
+                marginBottom: isVertical ? 14 : 20,
               }}
             >
-              <span style={{fontSize: isVertical ? 30 : 26, color: '#e0e0e0', fontWeight: 600}}>Giá chỉ:</span>
-              <span style={{fontSize: isVertical ? 60 : 52, fontWeight: 900, color: '#ff5722', letterSpacing: '-0.02em'}}>
+              <span style={{fontSize: isVertical ? 28 : 26, color: '#e0e0e0', fontWeight: 600}}>Giá chỉ:</span>
+              <span style={{fontSize: isVertical ? 52 : 52, fontWeight: 900, color: '#ff5722', letterSpacing: '-0.02em'}}>
                 {scene.price}
               </span>
               {scene.originalPrice && (
-                <span style={{fontSize: isVertical ? 30 : 26, color: '#888899', textDecoration: 'line-through', fontWeight: 500}}>
+                <span style={{fontSize: isVertical ? 28 : 26, color: '#888899', textDecoration: 'line-through', fontWeight: 500}}>
                   {scene.originalPrice}
                 </span>
               )}
