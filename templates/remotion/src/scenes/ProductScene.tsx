@@ -51,15 +51,15 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
       <div
         style={{
           position: 'absolute',
-          top: isVertical ? 130 : 60,
+          top: isVertical ? 100 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 580 : 160,
+          bottom: isVertical ? 430 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: isVertical ? '0 45px' : '0 90px',
+          padding: isVertical ? '0 30px' : '0 90px',
         }}
       >
         {/* Top Badges & Title Block */}
@@ -70,7 +70,7 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
               transform: `scale(${badgesIn})`,
               display: 'flex',
               gap: 12,
-              marginBottom: 16,
+              marginBottom: 14,
             }}
           >
             <ShopeeMallBadge scale={isVertical ? 1.4 : 1.2} />
@@ -81,11 +81,11 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
             style={{
               opacity: titleIn,
               transform: `translateY(${(1 - titleIn) * 25}px)`,
-              fontSize: isVertical ? 44 : 54,
+              fontSize: isVertical ? 42 : 54,
               fontWeight: 800,
               lineHeight: 1.2,
               letterSpacing: '-0.01em',
-              maxWidth: isVertical ? 920 : 1200,
+              maxWidth: isVertical ? 960 : 1200,
               textShadow: '0 2px 16px rgba(0,0,0,0.7)',
             }}
           >
@@ -100,17 +100,17 @@ export const ProductScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
               opacity: imgIn,
               transform: `scale(${imgIn * zoom}) translateY(${floatY}px)`,
               position: 'relative',
-              width: isVertical ? 540 : 560,
-              height: isVertical ? 500 : 440,
+              width: isVertical ? 860 : 620,
+              height: isVertical ? 760 : 440,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: 'rgba(255, 255, 255, 0.04)',
-              borderRadius: 36,
-              border: '1.5px solid rgba(255, 255, 255, 0.12)',
-              boxShadow: '0 30px 70px rgba(0, 0, 0, 0.65), 0 0 40px rgba(238, 77, 45, 0.15)',
+              borderRadius: 40,
+              border: '2px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.75), 0 0 50px rgba(238, 77, 45, 0.25)',
               overflow: 'hidden',
-              padding: scene.video ? 0 : 24,
+              padding: scene.video ? 0 : 16,
             }}
           >
             {scene.video ? (

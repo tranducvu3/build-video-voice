@@ -4,14 +4,22 @@ import type {Theme} from '../theme';
 
 // Sentence-sized pieces of a beat, each shown for its share of the beat's speech.
 const pieces = (text: string, isVertical: boolean = false) => {
-  const maxLen = isVertical ? 42 : 84;
+  const clean = text.replace(/\[[^\]]+\]/g, '').replace(/\s+/g, ' ').trim();
+  const maxLen = isVertical ? 46 : 84;
   const out: string[] = [];
-  for (let s of text.split(/(?<=[.!?…])\s+/)) {
+
+  for (let s of clean.split(/(?<=[.!?…])\s+/)) {
     while (s.length > maxLen) {
-      const cut = Math.max(s.lastIndexOf(', ', maxLen), s.lastIndexOf(' ', maxLen));
+      let cut = -1;
+      const commaCut = Math.max(s.lastIndexOf(', ', maxLen), s.lastIndexOf('; ', maxLen), s.lastIndexOf(' - ', maxLen));
+      if (commaCut >= Math.floor(maxLen * 0.35)) {
+        cut = commaCut + 1;
+      } else {
+        cut = s.lastIndexOf(' ', maxLen);
+      }
       if (cut <= 0) break;
-      out.push(s.slice(0, cut + 1).trim());
-      s = s.slice(cut + 1).trim();
+      out.push(s.slice(0, cut).trim());
+      s = s.slice(cut).trim();
     }
     if (s) out.push(s);
   }
@@ -34,9 +42,9 @@ export const Captions = ({beats, theme, isVertical = false}: {beats: Beat[]; the
   if (!cue) return null;
   const o = interpolate(frame, [cue.start, cue.start + 5, cue.end, cue.end + 4], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
-  const bottomPos = isVertical ? 260 : 54;
-  const sideMargin = isVertical ? 50 : 120;
-  const fontSize = isVertical ? 38 : 40;
+  const bottomPos = isVertical ? 220 : 54;
+  const sideMargin = isVertical ? 40 : 120;
+  const fontSize = isVertical ? 36 : 40;
 
   return (
     <div
@@ -60,14 +68,17 @@ export const Captions = ({beats, theme, isVertical = false}: {beats: Beat[]; the
           fontFamily: theme.font,
           fontWeight: 700,
           fontSize: fontSize,
-          lineHeight: 1.35,
-          padding: isVertical ? '14px 30px' : '14px 30px',
+          lineHeight: 1.32,
+          padding: isVertical ? '12px 28px' : '14px 30px',
           borderRadius: 20,
-          maxWidth: isVertical ? 880 : 1500,
+          maxWidth: isVertical ? 920 : 1500,
           textAlign: 'center',
           boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
           border: isVertical ? '2px solid rgba(255, 215, 0, 0.5)' : 'none',
           textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+          textWrap: 'balance' as any,
+          wordBreak: 'keep-all' as any,
+          overflowWrap: 'break-word',
         }}
       >
         {cue.text}

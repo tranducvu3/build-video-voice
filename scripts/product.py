@@ -544,7 +544,7 @@ def create_project(query, options):
 
     voice_name = options.get('voice', 'Trúc Ly')
     speed = float(options.get('speed', 1.12))
-    bgm_choice = options.get('bgm', 'upbeat')
+    bgm_choice = options.get('bgm', 'dynamic')
 
     script_content = {
         'slidesHash': hashlib.sha256((out_dir / 'slides.json').read_bytes()).hexdigest(),
@@ -608,7 +608,7 @@ def main():
     pc.add_argument('--discount', default='-35%', help='Discount tag (e.g. -35%%)')
     pc.add_argument('--rating', type=float, default=4.9, help='Star rating (default: 4.9)')
     pc.add_argument('--sold', default='15.8k+', help='Sold count (e.g. 15.8k+)')
-    pc.add_argument('--bgm', default='upbeat', help='Background music: upbeat, off, or audio path')
+    pc.add_argument('--bgm', default='dynamic', help='Background music: dynamic, happy, fun, carefree, monkeys, upbeat, random, off, or audio path')
     pc.add_argument('--theme', choices=['shopee', 'tech', 'beauty', 'minimal'], default='shopee')
     pc.add_argument('--image-count', type=int, default=6, help='Number of product images to download')
 

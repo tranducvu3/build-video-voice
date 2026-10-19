@@ -289,13 +289,18 @@ def regions(a):
 def chunks(text):
     """Subtitle-sized pieces: sentences, split again at commas when too long."""
     out = []
-    for sent in re.split(r'(?<=[.!?…])\s+', text.strip()):
+    clean = CUE.sub(' ', text).strip()
+    for sent in re.split(r'(?<=[.!?…])\s+', clean):
         while len(sent) > SUB_MAX_CHARS:
-            cut = max(sent.rfind(', ', 0, SUB_MAX_CHARS), sent.rfind(' ', 0, SUB_MAX_CHARS))
+            comma_cut = max(sent.rfind(', ', 0, SUB_MAX_CHARS), sent.rfind('; ', 0, SUB_MAX_CHARS), sent.rfind(' - ', 0, SUB_MAX_CHARS))
+            if comma_cut >= int(SUB_MAX_CHARS * 0.35):
+                cut = comma_cut + 1
+            else:
+                cut = sent.rfind(' ', 0, SUB_MAX_CHARS)
             if cut <= 0:
                 break
-            out.append(sent[:cut + 1].strip())
-            sent = sent[cut + 1:].strip()
+            out.append(sent[:cut].strip())
+            sent = sent[cut:].strip()
         if sent:
             out.append(sent)
     return out
@@ -413,19 +418,35 @@ def props(proj, sm, vm, script, captions, progress, bgm_choice=None):
     aspect_ratio = '9:16' if width < height else '16:9'
 
     # Background music
-    bgm_setting = bgm_choice or script.get('bgm') or sm.get('bgm')
+    bgm_setting = bgm_choice or script.get('bgm') or sm.get('bgm') or 'dynamic'
     bgm_rel = None
     if bgm_setting and bgm_setting != 'off':
         aud_dir = proj / '_assets' / 'audio'
         aud_dir.mkdir(parents=True, exist_ok=True)
-        if bgm_setting in ('upbeat', 'default', 'on', True):
-            src_bgm = SKILL / 'assets' / 'audio' / 'bgm-upbeat.mp3'
-            if src_bgm.exists():
-                shutil.copy(src_bgm, aud_dir / 'bgm.mp3')
-                bgm_rel = '_assets/audio/bgm.mp3'
-        elif Path(bgm_setting).exists():
-            shutil.copy(bgm_setting, aud_dir / Path(bgm_setting).name)
-            bgm_rel = f'_assets/audio/{Path(bgm_setting).name}'
+        audio_lib = SKILL / 'assets' / 'audio'
+        available = sorted([f for f in audio_lib.glob('bgm-*.mp3') if f.stat().st_size > 10000])
+
+        src_bgm = None
+        if Path(str(bgm_setting)).exists():
+            src_bgm = Path(str(bgm_setting))
+        elif available:
+            str_setting = str(bgm_setting).lower().replace('bgm-', '').replace('.mp3', '')
+            named_matches = [f for f in available if str_setting in f.stem.lower()]
+            if named_matches and str_setting not in ('dynamic', 'default', 'on', 'true', 'all'):
+                src_bgm = named_matches[0]
+            elif bgm_setting == 'random':
+                import random
+                src_bgm = random.choice(available)
+            else:
+                # Dynamic: Pick track deterministically based on project name / seed
+                # so each project gets a distinct track, but stays consistent on re-render
+                seed = int(hashlib.md5(proj.name.encode('utf-8')).hexdigest(), 16)
+                src_bgm = available[seed % len(available)]
+
+        if src_bgm and src_bgm.exists():
+            dest_bgm = aud_dir / src_bgm.name
+            shutil.copy(src_bgm, dest_bgm)
+            bgm_rel = f'_assets/audio/{src_bgm.name}'
 
     bgm_vol = script.get('bgmVolume', 0.14)
 

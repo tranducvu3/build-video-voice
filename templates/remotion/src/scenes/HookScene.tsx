@@ -52,15 +52,15 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
       <div
         style={{
           position: 'absolute',
-          top: isVertical ? 140 : 60,
+          top: isVertical ? 110 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 580 : 180,
+          bottom: isVertical ? 430 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: isVertical ? '0 50px' : '0 100px',
+          padding: isVertical ? '0 30px' : '0 80px',
         }}
       >
         {/* Header Block: Badge & Punchy Title */}
@@ -129,15 +129,15 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: isVertical ? 580 : 640,
-              height: isVertical ? 580 : 540,
+              width: isVertical ? 860 : 640,
+              height: isVertical ? 820 : 540,
               background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: 36,
+              borderRadius: 40,
               border: '2px solid rgba(238, 77, 45, 0.4)',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.6), 0 0 50px rgba(238, 77, 45, 0.25)',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.75), 0 0 50px rgba(238, 77, 45, 0.3)',
               backdropFilter: 'blur(16px)',
               overflow: 'hidden',
-              padding: scene.video ? 0 : 24,
+              padding: scene.video ? 0 : 16,
             }}
           >
             {scene.video ? (
@@ -148,7 +148,7 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  borderRadius: 36,
+                  borderRadius: 40,
                 }}
               />
             ) : (
@@ -158,7 +158,7 @@ export const HookScene = ({scene, theme, isVertical}: {scene: Scene; theme: Them
                   width: '100%',
                   height: '100%',
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.5))',
+                  filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))',
                 }}
               />
             )}

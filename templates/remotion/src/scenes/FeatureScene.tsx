@@ -48,15 +48,15 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
       <div
         style={{
           position: 'absolute',
-          top: isVertical ? 140 : 60,
+          top: isVertical ? 110 : 60,
           left: 0,
           right: 0,
-          bottom: isVertical ? 580 : 160,
+          bottom: isVertical ? 440 : 160,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: isVertical ? '0 45px' : '0 90px',
+          padding: isVertical ? '0 30px' : '0 90px',
         }}
       >
         {/* Top Callout Badge */}
@@ -68,7 +68,7 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
             color: '#ffffff',
             fontWeight: 800,
             fontSize: isVertical ? 26 : 22,
-            padding: isVertical ? '10px 26px' : '8px 22px',
+            padding: isVertical ? '10px 28px' : '8px 22px',
             borderRadius: 999,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
@@ -84,17 +84,17 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
             style={{
               opacity: imgIn,
               transform: `scale(${imgIn * zoom})`,
-              width: isVertical ? 580 : 580,
-              height: isVertical ? 580 : 450,
+              width: isVertical ? 900 : 640,
+              height: isVertical ? 880 : 500,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: 'rgba(255, 255, 255, 0.04)',
-              borderRadius: 36,
+              borderRadius: 40,
               border: '2px solid rgba(45, 212, 191, 0.35)',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(45, 212, 191, 0.2)',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.75), 0 0 50px rgba(45, 212, 191, 0.25)',
               overflow: 'hidden',
-              padding: scene.video ? 0 : 20,
+              padding: scene.video ? 0 : 16,
             }}
           >
             {scene.video ? (
@@ -105,7 +105,7 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  borderRadius: 36,
+                  borderRadius: 40,
                 }}
               />
             ) : (
@@ -115,7 +115,7 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
                   width: '100%',
                   height: '100%',
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.5))',
+                  filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.6))',
                 }}
               />
             )}
@@ -127,20 +127,20 @@ export const FeatureScene = ({scene, theme, isVertical}: {scene: Scene; theme: T
           style={{
             opacity: cardIn,
             transform: `translateY(${(1 - cardIn) * 30}px)`,
-            background: 'rgba(20, 24, 33, 0.85)',
-            border: '1.5px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 28,
-            padding: isVertical ? '18px 28px' : '20px 32px',
+            background: 'rgba(20, 24, 33, 0.88)',
+            border: '1.5px solid rgba(255, 255, 255, 0.18)',
+            borderRadius: 30,
+            padding: isVertical ? '18px 32px' : '20px 32px',
             textAlign: 'center',
-            maxWidth: isVertical ? 920 : 1100,
-            boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+            maxWidth: isVertical ? 960 : 1100,
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
             backdropFilter: 'blur(16px)',
           }}
         >
-          <div style={{fontSize: isVertical ? 38 : 44, fontWeight: 800, color: '#ffffff', marginBottom: 8}}>
+          <div style={{fontSize: isVertical ? 40 : 44, fontWeight: 800, color: '#ffffff', marginBottom: 6}}>
             {title}
           </div>
-          <div style={{fontSize: isVertical ? 24 : 26, color: '#9ccdd4', fontWeight: 500, lineHeight: 1.35}}>
+          <div style={{fontSize: isVertical ? 25 : 26, color: '#9ccdd4', fontWeight: 500, lineHeight: 1.35}}>
             {subtitle}
           </div>
         </div>

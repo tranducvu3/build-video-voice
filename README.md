@@ -15,8 +15,9 @@ An AI skill (`/build-video-voice`) that transforms **e-commerce products (Shopee
   4. `feature`: Secondary everyday convenience.
   5. `social_proof`: ⭐⭐⭐⭐⭐ 4.9/5.0 stars, `15.800+ Đã Bán`, and verified buyer review card.
   6. `cta`: Shopee Orange closer, floating vouchers (`VOUCHER 50K`, `FREESHIP 0Đ`), and animated bouncing arrow pointing directly to the cart / bio affiliate link.
-- **9:16 Vertical Mobile Format (1080×1920)**: Built specifically for TikTok, Shopee Video, Facebook Reels, and YouTube Shorts (or 16:9 for landscape).
-- **Background Music (BGM)**: Built-in upbeat royalty-free background music automatically mixed and ducked under the voiceover.
+- **9:16 Vertical Mobile Format (1080×1920)**: Built specifically for TikTok, Shopee Video, Facebook Reels, and YouTube Shorts (or 16:9 for landscape) with high-impact, enlarged product cards.
+- **Dynamic Background Music (BGM)**: Built-in library of royalty-free cheerful & upbeat tracks (`happy`, `fun`, `carefree`, `upbeat`, etc.) automatically mixed, ducked under speech, and dynamically varied across videos so each review video gets a unique sound.
+- **Smart Balanced Subtitles**: Intelligently synchronized with natural speech pauses, balanced line wraps (`text-wrap: balance`), clean 4D/product specs formatting, and zero orphan single words.
 - **Copy-Paste Social Post**: Writes `affiliate_post.md` with viral caption, hashtags, and your Shopee affiliate link.
 
 ### 2. 📊 Slide Deck Explainer Videos
